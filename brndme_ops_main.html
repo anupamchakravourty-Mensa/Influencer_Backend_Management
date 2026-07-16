@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRND.ME -- Ops Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070A0F;--surface:#0C1018;--card:#111820;--card-h:#161F2A;--border:#1C2535;--border-l:#263042;--ink:#E8EDF5;--ink-2:#B0BCC8;--muted:#5A6A7E;--dim:#2E3D50;--red:#E64833;--teal:#3ECFCF;--amber:#F5A623;--green:#3ECF8E;--purple:#A78BFA;--blue:#60A5FA;--bh:#3ECF8E;--mp:#A78BFA;--vl:#E64833;--mf:#F5A623;--sidebar-w:240px;--sidebar-c:64px;--topbar-h:54px;--font-d:"Syne",sans-serif;--font-b:"Inter",sans-serif;--r:8px;--rl:14px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:14px;-webkit-font-smoothing:antialiased;}
+body{font-family:var(--font-b);background:var(--bg);color:var(--ink);min-height:100vh;display:flex;overflow:hidden;}
+button{cursor:pointer;font-family:inherit;}input,select,textarea{font-family:inherit;}
+.sidebar{width:var(--sidebar-w);height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.3s cubic-bezier(0.4,0,0.2,1);position:relative;z-index:50;overflow:hidden;}
+.sidebar.collapsed{width:var(--sidebar-c);}
+.sidebar-top{padding:16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:var(--topbar-h);}
+.sidebar-brand{display:flex;align-items:center;gap:9px;overflow:hidden;white-space:nowrap;}
+.sidebar-brand-icon{width:28px;height:28px;border-radius:7px;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.sidebar-brand-text{font-family:var(--font-d);font-size:14px;font-weight:800;color:var(--ink);transition:opacity 0.2s;}
+.sidebar-brand-text em{color:var(--red);font-style:normal;}
+.sidebar.collapsed .sidebar-brand-text{opacity:0;pointer-events:none;}
+.collapse-btn{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:4px;border-radius:6px;flex-shrink:0;transition:color 0.2s;}
+.collapse-btn:hover{color:var(--ink);}
+.sidebar.collapsed .collapse-btn{margin:0 auto;}
+.sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 8px;}
+.nav-section-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);font-weight:600;padding:10px 10px 6px;white-space:nowrap;overflow:hidden;transition:opacity 0.2s;}
+.sidebar.collapsed .nav-section-label{opacity:0;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--r);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;position:relative;overflow:hidden;border:none;background:none;width:100%;text-align:left;color:var(--muted);margin-bottom:2px;}
+.nav-item:hover{background:var(--card);color:var(--ink-2);}
+.nav-item.active{background:var(--card-h);color:var(--ink);}
+.nav-item.active::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:3px;border-radius:0 3px 3px 0;background:var(--nav-accent,var(--red));}
+.nav-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:var(--card);}
+.nav-item:hover .nav-icon,.nav-item.active .nav-icon{background:var(--nav-icon-bg,rgba(230,72,51,0.12));}
+.nav-text{font-size:12px;font-weight:500;transition:opacity 0.2s;flex:1;}
+.sidebar.collapsed .nav-text{opacity:0;pointer-events:none;}
+.nav-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--red);color:#fff;}
+.sidebar.collapsed .nav-badge{opacity:0;}
+.sidebar-bottom{padding:10px 8px 14px;border-top:1px solid var(--border);flex-shrink:0;}
+.user-card{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--r);background:var(--card);border:1px solid var(--border);overflow:hidden;}
+.user-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+.user-info{overflow:hidden;flex:1;}
+.user-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity 0.2s;}
+.user-role{font-size:10px;color:var(--muted);transition:opacity 0.2s;}
+.sidebar.collapsed .user-name,.sidebar.collapsed .user-role{opacity:0;}
+.logout-btn{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px;border-radius:4px;transition:color 0.2s;flex-shrink:0;}
+.logout-btn:hover{color:var(--red);}
+.sidebar.collapsed .logout-btn{display:none;}
+.main-area{flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden;}
+.topbar{height:var(--topbar-h);flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+.topbar-time{font-size:11px;color:var(--muted);}
+.topbar-divider{width:1px;height:20px;background:var(--border);}
+.topbar-user{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 6px;background:var(--card);border:1px solid var(--border);border-radius:100px;}
+.topbar-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+.topbar-uname{font-size:12px;font-weight:500;color:var(--ink-2);}
+.page-content{flex:1;overflow-y:auto;background:var(--bg);}
+.pg{padding:24px 28px;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap;}
+.page-eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px;}
+.page-title{font-family:var(--font-d);font-size:22px;font-weight:700;color:var(--ink);}
+.page-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.btn{padding:9px 16px;border-radius:var(--r);font-size:12px;font-weight:600;border:1px solid var(--border);color:var(--ink-2);background:var(--card);transition:all 0.2s;display:inline-flex;align-items:center;gap:7px;}
+.btn:hover:not(:disabled){border-color:var(--border-l);background:var(--card-h);color:var(--ink);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-primary{background:var(--red);border-color:var(--red);color:#fff;}
+.btn-primary:hover:not(:disabled){background:#D03A25;border-color:#D03A25;color:#fff;}
+.btn-success{background:rgba(62,207,142,0.12);border-color:rgba(62,207,142,0.3);color:var(--green);}
+.section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+.section-label::after{content:"";flex:1;height:1px;background:var(--border);}
+.stat-strip{display:grid;gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;}
+.stat-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc-accent,var(--border));}
+.stat-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px;}
+.stat-value{font-family:var(--font-d);font-size:24px;font-weight:700;color:var(--ink);line-height:1;}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+.brand-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+.brand-tab{padding:8px 16px;border-radius:100px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all 0.2s;cursor:pointer;}
+.brand-tab:hover{border-color:var(--border-l);color:var(--ink-2);}
+.brand-tab.active{color:#fff;}
+.brand-tab.BH.active{background:var(--bh);border-color:var(--bh);color:#070A0F;}
+.brand-tab.MP.active{background:var(--mp);border-color:var(--mp);}
+.brand-tab.VL.active{background:var(--vl);border-color:var(--vl);}
+.brand-tab.MF.active{background:var(--mf);border-color:var(--mf);color:#070A0F;}
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.search-wrap{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 14px;flex:1;min-width:200px;max-width:300px;}
+.search-wrap input{background:none;border:none;outline:none;color:var(--ink);font-size:12px;width:100%;}
+.search-wrap input::placeholder{color:var(--muted);}
+.filter-select{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;color:var(--ink);font-size:12px;outline:none;cursor:pointer;}
+.filter-select:focus{border-color:var(--teal);}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.table-header-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--card);}
+.table-count{font-size:11px;color:var(--muted);font-weight:500;}
+.data-table{width:100%;border-collapse:collapse;}
+.data-table thead th{padding:10px 14px;text-align:left;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);background:var(--card);white-space:nowrap;}
+.data-table tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s;}
+.data-table tbody tr:last-child{border-bottom:none;}
+.data-table tbody tr:hover{background:var(--card-h);}
+.data-table td{padding:12px 14px;font-size:12px;color:var(--ink);vertical-align:middle;}
+.prod-img{width:44px;height:44px;border-radius:8px;background:var(--card);border:1px solid var(--border);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.prod-img img{width:100%;height:100%;object-fit:contain;}
+.cat-badge{display:inline-flex;padding:3px 9px;border-radius:100px;font-size:10px;font-weight:600;background:var(--card);border:1px solid var(--border);color:var(--muted);}
+.toggle{position:relative;width:38px;height:21px;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-track{position:absolute;inset:0;background:var(--dim);border-radius:100px;cursor:pointer;transition:background 0.25s;}
+.toggle-track::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:all 0.25s;opacity:0.5;}
+.toggle input:checked + .toggle-track{background:var(--green);}
+.toggle input:checked + .toggle-track::after{transform:translateX(17px);opacity:1;}
+.toggle input:disabled + .toggle-track{opacity:0.4;cursor:not-allowed;}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;font-size:10px;font-weight:600;}
+.pill-green{background:rgba(62,207,142,0.1);color:var(--green);}
+.pill-amber{background:rgba(245,166,35,0.1);color:var(--amber);}
+.pill-red{background:rgba(230,72,51,0.1);color:var(--red);}
+.pill-blue{background:rgba(96,165,250,0.1);color:var(--blue);}
+.pill-muted{background:var(--card);color:var(--muted);border:1px solid var(--border);}
+.skeleton{height:12px;border-radius:4px;background:linear-gradient(90deg,var(--card) 25%,var(--card-h) 50%,var(--card) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+@keyframes shimmer{to{background-position:-200% 0;}}
+.empty-state{padding:60px 24px;text-align:center;}
+.empty-icon{font-size:40px;margin-bottom:14px;}
+.empty-title{font-family:var(--font-d);font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+.empty-sub{font-size:12px;color:var(--muted);line-height:1.6;max-width:420px;margin:0 auto;}
+.home-greeting{margin-bottom:28px;}
+.home-time-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.home-title{font-family:var(--font-d);font-size:26px;font-weight:700;color:var(--ink);margin-bottom:5px;}
+.home-sub{font-size:13px;color:var(--muted);}
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:28px;}
+.quick-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:18px;cursor:pointer;transition:border-color 0.2s,transform 0.15s,box-shadow 0.2s;position:relative;overflow:hidden;}
+.quick-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--qc-accent,var(--border));}
+.quick-card:hover{border-color:var(--border-l);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
+.qc-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
+.qc-title{font-family:var(--font-d);font-size:13px;font-weight:700;color:var(--ink);margin-bottom:5px;}
+.qc-desc{font-size:11px;color:var(--muted);line-height:1.6;}
+.qc-arrow{position:absolute;bottom:14px;right:14px;font-size:14px;color:var(--dim);}
+.brand-status-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+.brand-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:10px;}
+.bs-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.bs-name{font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:3px;}
+.bs-val{font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--ink);}
+.bs-label{font-size:10px;color:var(--muted);}
+.activity-feed{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.feed-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--card);}
+.feed-title{font-size:12px;font-weight:600;color:var(--ink);}
+.feed-refresh{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;}
+.feed-item{display:flex;align-items:flex-start;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);}
+.feed-item:last-child{border-bottom:none;}
+.feed-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+.feed-text{font-size:12px;color:var(--ink-2);line-height:1.5;}
+.feed-text strong{color:var(--ink);}
+.feed-time{font-size:10px;color:var(--muted);margin-top:3px;}
+.coming-soon{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:48px 24px;min-height:400px;}
+.cs-icon{font-size:52px;margin-bottom:18px;}
+.cs-title{font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+.cs-desc{font-size:13px;color:var(--muted);line-height:1.7;max-width:360px;}
+.cs-tag{display:inline-flex;align-items:center;gap:6px;margin-top:18px;padding:8px 16px;background:var(--card);border:1px solid var(--border-l);border-radius:100px;font-size:12px;color:var(--ink-2);}
+.tr-selected{background:rgba(62,207,207,0.04)!important;}
+.cb{width:15px;height:15px;border:1.5px solid var(--border-l);border-radius:3px;cursor:pointer;background:var(--card);appearance:none;outline:none;}
+.cb:checked{background:var(--teal);border-color:var(--teal);}
+.cb:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-full{width:100%;padding:11px;border-radius:var(--r);font-size:12px;font-weight:700;border:none;}
+.pack-select{background:var(--card);border:1px solid var(--border-l);border-radius:6px;padding:5px 8px;color:var(--ink);font-size:11px;outline:none;cursor:pointer;min-width:130px;}
+.pack-select:focus{border-color:var(--teal);}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card-h);border:1px solid var(--border-l);color:var(--ink);padding:11px 20px;border-radius:var(--r);font-size:12px;font-weight:500;z-index:999;transition:transform 0.3s ease;box-shadow:0 8px 32px rgba(0,0,0,0.4);white-space:nowrap;display:flex;align-items:center;gap:9px;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:rgba(62,207,142,0.3);}
+#toast.err{border-color:rgba(230,72,51,0.3);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border-l);border-radius:var(--rl);width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.6);}
+.modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink);}
+.modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px;}
+.modal-body{padding:24px;}
+.modal-field{margin-bottom:16px;}
+.modal-label{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:7px;}
+.modal-val{font-size:13px;color:var(--ink);line-height:1.5;}
+.modal-val.mono{font-family:monospace;font-size:12px;color:var(--ink-2);}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border-l);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">B</div>
+      <div class="sidebar-brand-text">BRND<em>.</em>ME <span style="color:var(--muted);font-size:10px;font-weight:400">Ops</span></div>
+    </div>
+    <button class="collapse-btn" onclick="toggleSidebar()">&lt;</button>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <button class="nav-item active" data-section="home" data-tip="Home" onclick="navigate('home',this)" style="--nav-accent:var(--teal);--nav-icon-bg:rgba(62,207,207,0.1)"><div class="nav-icon">&#127968;</div><span class="nav-text">Home</span></button>
+    <div class="nav-section-label">Operations</div>
+    <button class="nav-item" data-section="catalog" data-tip="Catalog" onclick="navigate('catalog',this)" style="--nav-accent:var(--blue);--nav-icon-bg:rgba(96,165,250,0.1)"><div class="nav-icon">&#128230;</div><span class="nav-text">Catalog Management</span></button>
+    <button class="nav-item" data-section="orders" data-tip="Orders" onclick="navigate('orders',this)" style="--nav-accent:var(--amber);--nav-icon-bg:rgba(245,166,35,0.1)"><div class="nav-icon">&#128717;</div><span class="nav-text">Orders Management</span><span class="nav-badge" id="ordersBadge" style="display:none">0</span></button>
+    <button class="nav-item" data-section="shipment" data-tip="Shipment" onclick="navigate('shipment',this)" style="--nav-accent:var(--green);--nav-icon-bg:rgba(62,207,142,0.1)"><div class="nav-icon">&#128666;</div><span class="nav-text">Shipment Movement</span></button>
+    <button class="nav-item" data-section="finance" data-tip="Finance" onclick="navigate('finance',this)" style="--nav-accent:var(--purple);--nav-icon-bg:rgba(167,139,250,0.1)"><div class="nav-icon">&#128176;</div><span class="nav-text">Finance</span></button>
+    <div class="nav-section-label">System</div>
+    <button class="nav-item" data-section="settings" data-tip="Settings" onclick="navigate('settings',this)" style="--nav-accent:var(--muted);--nav-icon-bg:rgba(90,106,126,0.1)"><div class="nav-icon">&#9881;</div><span class="nav-text">Settings</span></button>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-card">
+      <div class="user-avatar" id="sidebarAvatar" style="background:#3ECFCF">AC</div>
+      <div class="user-info"><div class="user-name" id="sidebarName">Anupam C.</div><div class="user-role">Full Access</div></div>
+      <button class="logout-btn" onclick="doLogout()" title="Sign out">X</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-area">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+      <span style="color:var(--muted)">BRND.ME Ops</span>
+      <span style="color:var(--dim)">&gt;</span>
+      <span style="font-weight:600;color:var(--ink)" id="breadcrumbText">Home</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-time" id="clockDisplay">--:--</span>
+      <div class="topbar-divider"></div>
+      <div class="topbar-user">
+        <div class="topbar-avatar" id="topbarAvatar" style="background:#3ECFCF">AC</div>
+        <span class="topbar-uname" id="topbarName">Anupam</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-content" id="pageContent">
+
+    <!-- HOME -->
+    <div id="section-home" class="pg">
+      <div class="home-greeting">
+        <div class="home-time-label" id="greetLabel">Good morning</div>
+        <div class="home-title" id="greetTitle">Welcome back!</div>
+        <div class="home-sub">Here's what's happening across your brands today.</div>
+      </div>
+      <div class="section-label">Quick Access</div>
+      <div class="quick-grid">
+        <div class="quick-card" style="--qc-accent:var(--blue)" onclick="navigate('catalog',document.querySelector('[data-section=catalog]'))"><div class="qc-icon" style="background:rgba(96,165,250,0.1)">&#128230;</div><div class="qc-title">Catalog Management</div><div class="qc-desc">View SKUs, COGS, inventory. Enable or disable listings per brand.</div><div class="qc-arrow">&gt;</div></div>
+        <div class="quick-card" style="--qc-accent:var(--amber)" onclick="navigate('orders',document.querySelector('[data-section=orders]'))"><div class="qc-icon" style="background:rgba(245,166,35,0.1)">&#128717;</div><div class="qc-title">Orders Management</div><div class="qc-desc">Set Go-Ahead approvals, send to Master, assign lots, generate CSVs.</div><div class="qc-arrow">&gt;</div></div>
+        <div class="quick-card" style="--qc-accent:var(--green)" onclick="navigate('shipment',document.querySelector('[data-section=shipment]'))"><div class="qc-icon" style="background:rgba(62,207,142,0.1)">&#128666;</div><div class="qc-title">Shipment Movement</div><div class="qc-desc">Update packing, dispatch and delivery status. Enter AWB numbers.</div><div class="qc-arrow">&gt;</div></div>
+        <div class="quick-card" style="--qc-accent:var(--purple)" onclick="navigate('finance',document.querySelector('[data-section=finance]'))"><div class="qc-icon" style="background:rgba(167,139,250,0.1)">&#128176;</div><div class="qc-title">Finance</div><div class="qc-desc">View shipment costs by brand and month. Send finance reports.</div><div class="qc-arrow">&gt;</div></div>
+      </div>
+      <div class="section-label">Brand Overview</div>
+      <div class="brand-status-row">
+        <div class="brand-stat"><div class="bs-icon" style="background:rgba(62,207,142,0.1)">&#127807;</div><div><div class="bs-name">Botanic Hearth</div><div class="bs-val" id="stat-bh">--</div><div class="bs-label">pending orders</div></div></div>
+        <div class="brand-stat"><div class="bs-icon" style="background:rgba(167,139,250,0.1)">&#128156;</div><div><div class="bs-name">Majestic Pure</div><div class="bs-val" id="stat-mp">--</div><div class="bs-label">pending orders</div></div></div>
+        <div class="brand-stat"><div class="bs-icon" style="background:rgba(230,72,51,0.1)">&#128420;</div><div><div class="bs-name">Villain</div><div class="bs-val" id="stat-vl">--</div><div class="bs-label">pending orders</div></div></div>
+        <div class="brand-stat"><div class="bs-icon" style="background:rgba(245,166,35,0.1)">&#128170;</div><div><div class="bs-name">My Fitness</div><div class="bs-val" id="stat-mf">--</div><div class="bs-label">pending orders</div></div></div>
+      </div>
+      <div class="section-label">System Activity</div>
+      <div class="activity-feed">
+        <div class="feed-header"><div class="feed-title">Recent Activity</div><button class="feed-refresh" onclick="loadHomeStats()">Refresh</button></div>
+        <div id="activityFeed"><div class="feed-item"><div class="feed-dot" style="background:var(--teal)"></div><div><div class="feed-text">Portal loaded</div><div class="feed-time">Just now</div></div></div></div>
+      </div>
+    </div>
+
+    <!-- CATALOG -->
+    <div id="section-catalog" style="display:none" class="pg">
+      <div class="page-header">
+        <div><div class="page-eyebrow">Operations - Step 1</div><div class="page-title">Catalog Management</div></div>
+        <div class="page-actions" style="flex-wrap:wrap;gap:8px"><button class="btn" onclick="loadCatalog()">Refresh</button></div>
+      </div>
+      <div class="stat-strip" style="grid-template-columns:repeat(5,1fr)">
+        <div class="stat-card" style="--sc-accent:var(--blue)"><div class="stat-label">Total SKUs</div><div class="stat-value" id="cat-total">--</div></div>
+        <div class="stat-card" style="--sc-accent:var(--green)"><div class="stat-label">Active</div><div class="stat-value" id="cat-active">--</div></div>
+        <div class="stat-card" style="--sc-accent:var(--red)"><div class="stat-label">Disabled</div><div class="stat-value" id="cat-disabled">--</div></div>
+        <div class="stat-card" style="--sc-accent:var(--amber)"><div class="stat-label">Out of Stock</div><div class="stat-value" id="cat-oos">--</div></div>
+        <div class="stat-card" style="--sc-accent:var(--teal)"><div class="stat-label">Avg COGS</div><div class="stat-value" id="cat-avgcogs" style="font-size:18px">--</div></div>
+      </div>
+      <div class="brand-tabs" id="catalogBrandTabs">
+        <button class="brand-tab active" data-brand="ALL" onclick="setCatalogBrand(this)">All Brands</button>
+        <button class="brand-tab BH" data-brand="BH" onclick="setCatalogBrand(this)">&#127807; Botanic Hearth</button>
+        <button class="brand-tab MP" data-brand="MP" onclick="setCatalogBrand(this)">&#128156; Majestic Pure</button>
+        <button class="brand-tab VL" data-brand="VL" onclick="setCatalogBrand(this)">&#10084; Villain</button>
+        <button class="brand-tab MF" data-brand="MF" onclick="setCatalogBrand(this)">&#128170; My Fitness</button>
+      </div>
+      <div class="filter-bar">
+        <div class="search-wrap"><span style="color:var(--muted)">s</span><input type="text" id="catSearch" placeholder="Search SKU, title, EAN..." oninput="renderCatalog()"></div>
+        <select class="filter-select" id="catStockFilter" onchange="renderCatalog()"><option value="ALL">All Stock</option><option value="IN">In Stock</option><option value="OUT">Out of Stock</option></select>
+        <select class="filter-select" id="catShowFilter" onchange="renderCatalog()"><option value="ALL">All Listings</option><option value="ACTIVE">Active</option><option value="HIDDEN">Hidden</option></select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header-bar"><div class="table-count" id="catTableCount">Loading...</div></div>
+        <table class="data-table"><thead><tr><th>Product</th><th>Category</th><th>COGS</th><th>Stock</th><th>Source</th><th>Status</th><th>Show on Portal</th><th></th></tr></thead>
+        <tbody id="catalogBody"><tr><td colspan="8" style="padding:24px"><div class="skeleton" style="margin-bottom:10px"></div><div class="skeleton" style="width:70%"></div></td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div id="section-orders" style="display:none" class="pg">
+      <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)">
+        <button class="ord-subnav" data-sub="brand-orders" onclick="setOrderSub(this,'brand-orders')" style="padding:10px 20px;background:none;border:none;border-bottom:2px solid var(--amber);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer">Brand Orders</button>
+        <button class="ord-subnav" data-sub="master-orders" onclick="setOrderSub(this,'master-orders')" style="padding:10px 20px;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Master Order</button>
+      </div>
+
+      <!-- Brand Orders -->
+      <div id="sub-brand-orders">
+        <div class="page-header">
+          <div><div class="page-eyebrow">Step 2a</div><div class="page-title">Brand Orders - Go-Ahead</div></div>
+          <div class="page-actions">
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:100px">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--green)" id="refreshDot"></span>
+              <span id="refreshLabel">Auto-refresh ON</span>
+            </div>
+            <button class="btn" onclick="loadOrders()">Refresh Now</button>
+            <button class="btn btn-primary" id="sendMasterBtn" onclick="sendApprovedToMaster()">Send Approved to Master</button>
+          </div>
+        </div>
+        <div class="stat-strip" style="grid-template-columns:repeat(5,1fr)">
+          <div class="stat-card" style="--sc-accent:var(--blue)"><div class="stat-label">Total Orders</div><div class="stat-value" id="ord-total">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--amber)"><div class="stat-label">Pending Review</div><div class="stat-value" id="ord-pending">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--green)"><div class="stat-label">Go-Ahead Given</div><div class="stat-value" id="ord-approved">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--teal)"><div class="stat-label">Sent to Master</div><div class="stat-value" id="ord-sent">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--purple)"><div class="stat-label">Total COGS</div><div class="stat-value" id="ord-cogs" style="font-size:17px">--</div></div>
+        </div>
+        <div class="brand-tabs" id="ordBrandTabs">
+          <button class="brand-tab active" data-brand="ALL" onclick="setOrderBrand(this)">All Brands</button>
+          <button class="brand-tab BH" data-brand="BH" onclick="setOrderBrand(this)">&#127807; Botanic Hearth</button>
+          <button class="brand-tab MP" data-brand="MP" onclick="setOrderBrand(this)">&#128156; Majestic Pure</button>
+          <button class="brand-tab VL" data-brand="VL" onclick="setOrderBrand(this)">&#10084; Villain</button>
+          <button class="brand-tab MF" data-brand="MF" onclick="setOrderBrand(this)">&#128170; My Fitness</button>
+        </div>
+        <div class="filter-bar">
+          <div class="search-wrap"><span style="color:var(--muted)">s</span><input type="text" id="ordSearch" placeholder="Search influencer, contact, SKU..." oninput="renderOrders()"></div>
+          <select class="filter-select" id="ordStatusFilter" onchange="renderOrders()">
+            <option value="ALL">All Status</option>
+            <option value="PENDING">Blank - No decision</option>
+            <option value="APPROVED">Yes - Go-Ahead given</option>
+            <option value="SENT">Sent to Master</option>
+          </select>
+          <div id="ordBulkBar" style="display:none;gap:8px;align-items:center">
+            <span id="ordBulkCount" style="font-size:11px;color:var(--teal);padding:4px 10px;background:rgba(62,207,207,0.08);border:1px solid rgba(62,207,207,0.2);border-radius:100px;font-weight:600"></span>
+            <button class="btn btn-success" onclick="bulkApproveOrders()">Give Go-Ahead</button>
+            <button class="btn" style="color:var(--red);border-color:rgba(230,72,51,0.3)" onclick="bulkRevokeOrders()">Revoke</button>
+            <button class="btn" onclick="clearOrderSelection()">Clear</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header-bar"><div class="table-count" id="ordTableCount">Loading...</div><div style="font-size:11px;color:var(--muted)" id="lastRefreshTime"></div></div>
+          <table class="data-table"><thead><tr>
+            <th><input type="checkbox" class="cb" id="ordSelectAll" onchange="toggleOrdSelectAll()"></th>
+            <th>Influencer</th><th>Brand</th><th>SKUs</th><th>COGS</th>
+            <th style="min-width:140px">Go-Ahead</th><th>Master Status</th><th>Date</th><th></th>
+          </tr></thead>
+          <tbody id="ordersBody"><tr><td colspan="9" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div><div class="skeleton" style="width:70%"></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- Master Order -->
+      <div id="sub-master-orders" style="display:none">
+        <div class="page-header">
+          <div><div class="page-eyebrow">Step 2b</div><div class="page-title">Master Order Sheet</div></div>
+          <div class="page-actions">
+            <button class="btn" onclick="loadMasterOrders()">Refresh</button>
+            <!-- Single combined dispatch button -->
+            <button class="btn btn-primary" onclick="runFullDispatch()" id="fullDispatchBtn"
+              style="font-size:13px;padding:10px 20px;font-weight:700"
+              title="Runs all 3 steps in sequence: Assign lots → Generate CSVs → Email to warehouse + Assign SHP numbers">
+              &#128640; Process &amp; Dispatch All
+            </button>
+            <!-- Individual step buttons (collapsed by default) -->
+            <button class="btn" onclick="toggleStepButtons()" id="toggleStepsBtn"
+              style="font-size:11px;color:var(--muted)">
+              Individual Steps &#9660;
+            </button>
+            <div id="stepButtonsRow" style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="btn" style="background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.3);color:var(--amber);font-size:11px"
+                onclick="callMasterAction('assignLots')" id="assignLotsBtn"
+                title="Step 1: Assigns lot number to all rows without one">
+                1. Assign Lots <span id="pendingLotCount" style="font-size:10px;opacity:0.75"></span>
+              </button>
+              <button class="btn" style="background:rgba(96,165,250,0.1);border-color:rgba(96,165,250,0.3);color:var(--blue);font-size:11px"
+                onclick="callMasterAction('generateCSV')" id="generateCSVBtn"
+                title="Step 2: Generates CSV for lots with status=Pending">
+                2. Generate CSVs <span id="pendingCSVCount" style="font-size:10px;opacity:0.75"></span>
+              </button>
+              <button class="btn" style="background:rgba(62,207,142,0.1);border-color:rgba(62,207,142,0.3);color:var(--green);font-size:11px"
+                onclick="callMasterAction('shareWarehouse')" id="shareWHBtn"
+                title="Step 3: Emails CSV to warehouse + assigns SHP numbers">
+                3. Email + SHP Numbers <span id="pendingSHPCount" style="font-size:10px;opacity:0.75"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="stat-strip" style="grid-template-columns:repeat(6,1fr)">
+          <div class="stat-card" style="--sc-accent:var(--teal)"><div class="stat-label">Total Rows</div><div class="stat-value" id="mst-total">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--amber)"><div class="stat-label">Pending Lot</div><div class="stat-value" id="mst-nolot">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--blue)"><div class="stat-label">CSV Generated</div><div class="stat-value" id="mst-csv">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--green)"><div class="stat-label">Emailed to WH</div><div class="stat-value" id="mst-sent">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--green)"><div class="stat-label">Packing Approved</div><div class="stat-value" id="mst-approved">--</div></div>
+          <div class="stat-card" style="--sc-accent:var(--red)"><div class="stat-label">Pending Approval</div><div class="stat-value" id="mst-pending-pack">--</div><div class="stat-sub">awaiting WH</div></div>
+        </div>
+        <!-- Bulk Packing Bar -->
+        <div id="mstBulkBar" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--card);border:1px solid var(--border-l);border-radius:var(--r);margin-bottom:12px;flex-wrap:wrap">
+          <span id="mstBulkCount" style="font-size:11px;color:var(--teal);padding:4px 10px;background:rgba(62,207,207,0.08);border:1px solid rgba(62,207,207,0.2);border-radius:100px;font-weight:600"></span>
+          <span style="font-size:11px;color:var(--muted)">Set packing approval:</span>
+          <button class="btn" style="background:rgba(62,207,142,0.1);border-color:rgba(62,207,142,0.3);color:var(--green)" onclick="bulkSetPacking('Approved')">Approved</button>
+          <button class="btn" style="background:rgba(230,72,51,0.1);border-color:rgba(230,72,51,0.3);color:var(--red)" onclick="bulkSetPacking('Rejected')">Rejected</button>
+          <span style="color:var(--dim);font-size:12px">|</span>
+          <button class="btn" onclick="clearMstSelection()">Clear Selection</button>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">Changes sync to sheet immediately</span>
+        </div>
+        <!-- Filters -->
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+          <!-- Row 1: Search + Brand + Sort -->
+          <div class="filter-bar" style="margin-bottom:0">
+            <div class="search-wrap" style="max-width:260px">
+              <span style="color:var(--muted)">&#8981;</span>
+              <input type="text" id="mstSearch" placeholder="Search name, contact, SHP, EAN, SKU..." oninput="renderMasterOrders()">
+            </div>
+            <select class="filter-select" id="mstBrandFilter" onchange="renderMasterOrders()">
+              <option value="ALL">All Brands</option>
+              <option value="Botanic Hearth">&#127807; Botanic Hearth</option>
+              <option value="Majestic Pure">&#128156; Majestic Pure</option>
+              <option value="Villain">&#10084; Villain</option>
+              <option value="My Fitness">&#128170; My Fitness</option>
+            </select>
+            <select class="filter-select" id="mstSortFilter" onchange="renderMasterOrders()">
+              <option value="CONTACT">Sort by Contact</option>
+              <option value="LOT">Sort by Lot</option>
+              <option value="SHP">Sort by SHP</option>
+              <option value="DATE">Sort by Date</option>
+              <option value="BRAND">Sort by Brand</option>
+              <option value="COGS">Sort by COGS (High-Low)</option>
+            </select>
+          </div>
+          <!-- Row 2: Stage + Lot + Packing + SKU Status -->
+          <div class="filter-bar" style="margin-bottom:0">
+            <select class="filter-select" id="mstStatusFilter" onchange="renderMasterOrders()">
+              <option value="ALL">All Stages</option>
+              <option value="NOLOT">No Lot Assigned</option>
+              <option value="LOT">Lot Assigned</option>
+              <option value="CSV">CSV Generated</option>
+              <option value="SENT">Emailed to WH</option>
+              <option value="PENDING_PACK">Packing Pending</option>
+              <option value="APPROVED">Packing Approved</option>
+              <option value="REJECTED">Packing Rejected</option>
+              <option value="NO_DRIVE">Drive Link Missing</option>
+            </select>
+            <select class="filter-select" id="mstLotFilter" onchange="renderMasterOrders()" style="min-width:130px">
+              <option value="ALL">All Lots</option>
+            </select>
+            <select class="filter-select" id="mstPackFilter" onchange="renderMasterOrders()">
+              <option value="ALL">All Packing Status</option>
+              <option value="blank">Blank (Awaiting)</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+            <select class="filter-select" id="mstSkuStatusFilter" onchange="renderMasterOrders()">
+              <option value="ALL">All SKU Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Done">Done</option>
+            </select>
+            <select class="filter-select" id="mstEmailFilter" onchange="renderMasterOrders()">
+              <option value="ALL">All Email Status</option>
+              <option value="sent">Sent</option>
+              <option value="pending">Not Sent</option>
+            </select>
+          </div>
+        </div>
+        <!-- Table -->
+        <div class="table-wrap">
+          <div class="table-header-bar">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="table-count" id="mstTableCount">Loading master orders...</div>
+              <div style="font-size:10px;color:var(--muted)" id="mstLastRefresh">Auto-refreshes every 30s</div>
+            </div>
+            <div style="font-size:10px;color:var(--muted)" id="mstLastRefresh"></div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table" style="min-width:1100px">
+              <thead><tr>
+                <th><input type="checkbox" class="cb" id="mstSelectAll" onchange="toggleMstSelectAll()"></th>
+                <th>Influencer</th><th>Contact</th><th>Brand</th><th>SKU / Title</th>
+                <th>COGS</th><th>Lot</th><th>SHP Number</th><th>SKU Status</th><th>Email Status</th>
+                <th style="min-width:160px">Packing Approval (Col V)</th>
+                <th style="min-width:140px">Drive Folder (Col W)</th>
+                <th>Date</th>
+              </tr></thead>
+              <tbody id="masterOrdersBody">
+                <tr><td colspan="13" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div><div class="skeleton" style="width:60%"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHIPMENT -->
+    <div id="section-shipment" style="display:none" class="pg">
+      <div class="coming-soon"><div class="cs-icon">S</div><div class="cs-title">Shipment Movement</div><div class="cs-desc">Track and update packing, dispatch and delivery status. Enter AWB numbers per shipment.</div><div class="cs-tag">Building next</div></div>
+    </div>
+
+    <!-- FINANCE -->
+    <div id="section-finance" style="display:none" class="pg">
+      <div class="coming-soon"><div class="cs-icon">F</div><div class="cs-title">Finance</div><div class="cs-desc">View shipment costs by brand, lot and month. Send monthly finance reports to the finance team.</div><div class="cs-tag">Coming after Shipment</div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="section-settings" style="display:none" class="pg">
+      <div class="coming-soon"><div class="cs-icon">G</div><div class="cs-title">Settings</div><div class="cs-desc">Manage users, permissions, brand configurations and sheet connections.</div><div class="cs-tag">Coming later</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="productModal" onclick="if(event.target===this)closeProductModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head"><div class="modal-title" id="modalTitle">Details</div><button class="modal-close" onclick="closeProductModal()">X</button></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFooter"><button class="btn" onclick="closeProductModal()">Close</button></div>
+  </div>
+</div>
+
+<!-- ORDER DRAWER -->
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:300;backdrop-filter:blur(3px)" id="ordDrawerOverlay" onclick="closeOrderDrawer()"></div>
+<div style="position:fixed;top:0;right:-580px;width:560px;max-width:96vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:301;display:flex;flex-direction:column;transition:right 0.35s cubic-bezier(0.4,0,0.2,1);box-shadow:-8px 0 40px rgba(0,0,0,0.5)" id="ordDrawer">
+  <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--ink)" id="drawerTitle">Order Details</div>
+    <button onclick="closeOrderDrawer()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">X</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:22px" id="drawerBody"></div>
+  <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0" id="drawerFooter"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var API_KEY = 'AIzaSyDAkVIC8G7v8wrZdfvZBMzd5dpHCTMPfg4';
+var MASTER_WEBAPP = 'https://script.google.com/macros/s/AKfycbz4-hb6A8pGFhrbmaDFRLsbE4rBsjilbOuz2ymfYCmPAm0O5EY0sDb3QzgkMmItrxJEjA/exec';
+var BRANDS = {
+  BH:{id:'1znEEtFTV8SvokWkmJ9GQOswxunpwIFiiU9lkXgUsisM',name:'Botanic Hearth',emoji:'&#127807;',color:'#3ECF8E',stat:'stat-bh'},
+  MP:{id:'1DKyiYXu4FgUKQrbBcb28zBfzAjgZgMGHfksWgyTn67I',name:'Majestic Pure', emoji:'&#128156;',color:'#A78BFA',stat:'stat-mp'},
+  VL:{id:'1lhewpuKNXW-i1jMi2r-l_noW87DFw9EDq-ifd_dPxdU',name:'Villain',       emoji:'&#128420;',color:'#E64833',stat:'stat-vl'},
+  MF:{id:'1OIrmgumHnObBGlNWd5KMJjpH8x4LFoxdYTT6ZppwleQ',name:'My Fitness',    emoji:'&#128170;',color:'#F5A623',stat:'stat-mf'}
+};
+var BRAND_WEBAPPS = {
+  BH:'https://script.google.com/macros/s/AKfycbw1_qIPPzyrezIKPEBeC-g_OD73LH0WWNPWShRDwPsQn9BcmHKS6dtvTN2MWF_Ryw-c/exec',
+  MP:'https://script.google.com/macros/s/AKfycbx87o24ch57tRI0Cg9gH8BlRd4BuB1hJtV4oMKsOFc8KrDV9Veb0ZKT2f1rwoyKMhlc/exec',
+  VL:'https://script.google.com/macros/s/AKfycbzCDt3lGsRGx57BkqkRhsWu6-fUt_yiMNQlfeu7MOPPZGsiKHB2SWfTmAnJBYW99U7VZw/exec',
+  MF:'https://script.google.com/macros/s/AKfycbwiorVu5gz5-wbq3yQG0HU1WHCagslIRBYcQ5EZDdrsOylvwLyanRYp0Lu9c-R/exec'
+};
+var CM={EAN:0,BRAND:1,ASIN:2,SKU:3,CAT:4,IMG:5,IMGURL:6,TITLE:7,SHORT:8,VOL:9,QTY:10,STOCK:11,SRC:12,SALES:13,ELIG:14,SHOW:15};
+var PM={EAN:0,COGS:7};
+var OC={TIMESTAMP:0,ORDER_ID:1,NAME:2,CONTACT:3,ADDRESS:4,EAN:5,ASIN:6,SKU:7,BRAND:8,CATEGORY:9,TITLE:10,IMAGE:11,COGS:12,AVAIL_QTY:13,STOCK_SOURCE:14,GO_AHEAD:15,MASTER_STATUS:16};
+var USERS={anupam:{pass:'Operations12345',name:'Anupam Chakravourty',short:'Anupam',initials:'AC',color:'#3ECFCF'},shivani:{pass:'BrandMarketing34567',name:'Shivani Sharma',short:'Shivani',initials:'SS',color:'#A78BFA'},tushar:{pass:'Manager09876',name:'Tushar Singla',short:'Tushar',initials:'TS',color:'#F5A623'}};
+
+var currentUser=null,allCatalog=[],filteredCatalog=[],activeCatBrand='ALL';
+var allOrders=[],filteredOrders=[],allMasterOrders=[],activeOrdBrand='ALL';
+var selectedOrdIds=new Set(),selectedMstRows=new Set(),ordAutoRefresh=null,currentOrdSub='brand-orders';
+var sidebarCollapsed=false;
+
+function initSession(){
+  var s=sessionStorage.getItem('brndme_user');
+  if(s){try{currentUser=JSON.parse(s);}catch(e){}}
+  if(!currentUser) currentUser={username:'anupam',name:'Anupam Chakravourty',short:'Anupam',initials:'AC',color:'#3ECFCF',role:'admin'};
+  var u=currentUser,ini=u.initials||'AC',col=u.color||'#3ECFCF',first=u.short||'User';
+  ['sidebarAvatar','topbarAvatar'].forEach(function(id){var el=document.getElementById(id);if(el){el.textContent=ini;el.style.background=col;}});
+  var sn=document.getElementById('sidebarName'); if(sn) sn.textContent=first+'.';
+  var tn=document.getElementById('topbarName'); if(tn) tn.textContent=first;
+  var gt=document.getElementById('greetTitle'); if(gt) gt.textContent='Welcome back, '+first+'!';
+}
+function doLogout(){sessionStorage.removeItem('brndme_user');window.location.href='index.html';}
+
+var SMETA={home:'Home',catalog:'Catalog Management',orders:'Orders Management',shipment:'Shipment Movement',finance:'Finance',settings:'Settings'};
+function navigate(section,btn){
+  document.querySelectorAll('[id^="section-"]').forEach(function(el){el.style.display='none';});
+  document.getElementById('section-'+section).style.display='block';
+  document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  var bc=document.getElementById('breadcrumbText'); if(bc) bc.textContent=SMETA[section]||section;
+  var pc=document.getElementById('pageContent'); if(pc) pc.scrollTop=0;
+  if(section==='catalog'&&allCatalog.length===0) loadCatalog();
+  if(section==='orders'){if(allOrders.length===0) loadOrders();startAutoRefresh();}
+  else stopAutoRefresh();
+}
+function toggleSidebar(){
+  var sb=document.getElementById('sidebar');
+  sidebarCollapsed=!sidebarCollapsed;
+  sb.classList.toggle('collapsed',sidebarCollapsed);
+  sb.querySelector('.collapse-btn').textContent=sidebarCollapsed?'>':'<';
+  localStorage.setItem('sb_collapsed',sidebarCollapsed);
+}
+if(localStorage.getItem('sb_collapsed')==='true'){
+  var _sb=document.getElementById('sidebar');if(_sb)_sb.classList.add('collapsed');
+  var _cb=document.querySelector('.collapse-btn');if(_cb)_cb.textContent='>';
+  sidebarCollapsed=true;
+}
+
+function updateClock(){var el=document.getElementById('clockDisplay');if(el)el.textContent=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Dubai',hour:'2-digit',minute:'2-digit'})+' GST';}
+setInterval(updateClock,1000);updateClock();
+function setGreeting(){var h=new Date().getHours(),el=document.getElementById('greetLabel');if(el)el.textContent=h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
+setGreeting();
+
+function loadHomeStats(){
+  Object.entries(BRANDS).forEach(function(e){
+    var code=e[0],brand=e[1];
+    fetch('https://sheets.googleapis.com/v4/spreadsheets/'+brand.id+'/values/Order_Record!P2:Q2000?key='+API_KEY)
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var rows=data.values||[];
+      var p=rows.filter(function(r){return (!r[0]||r[0].toUpperCase()!=='YES')&&(!r[1]||!r[1].trim());}).length;
+      var el=document.getElementById(brand.stat);if(el)el.textContent=p;
+    }).catch(function(){var el=document.getElementById(brand.stat);if(el)el.textContent='--';});
+  });
+}
+
+function loadCatalog(){
+  var cb=document.getElementById('catalogBody');
+  if(cb) cb.innerHTML='<tr><td colspan="8" style="padding:24px"><div class="skeleton" style="margin-bottom:10px"></div></td></tr>';
+  allCatalog=[];
+  var proms=Object.entries(BRANDS).map(function(e){
+    var code=e[0],brand=e[1];
+    return Promise.all([
+      fetch('https://sheets.googleapis.com/v4/spreadsheets/'+brand.id+'/values/Catalog_Master!A2:P500?key='+API_KEY).then(function(r){return r.json();}),
+      fetch('https://sheets.googleapis.com/v4/spreadsheets/'+brand.id+'/values/Product_Master!A2:H500?key='+API_KEY).then(function(r){return r.json();})
+    ]).then(function(res){
+      var catData=res[0],pmData=res[1],cogsMap={};
+      (pmData.values||[]).forEach(function(pr){var e=(pr[0]||'').toString().trim(),c=parseFloat(pr[7]||0)||0;if(e&&c)cogsMap[e]=c;});
+      (catData.values||[]).forEach(function(r,i){
+        if(!r[CM.EAN])return;
+        var ean=(r[CM.EAN]||'').toString().trim(),v=(r[CM.SHOW]||'').toString().toUpperCase().trim();
+        var show=v.indexOf('YES')>-1||v==='Y'||(v.indexOf('NO')===-1&&v!=='N'&&(parseInt(r[CM.QTY]||0)||0)>50);
+        allCatalog.push({_id:code+'-'+i,_brand:code,_brandName:brand.name,_brandColor:brand.color,_row:i+2,
+          ean:ean,sku:r[CM.SKU]||'',cat:r[CM.CAT]||'',imgUrl:r[CM.IMGURL]||r[CM.IMG]||'',
+          title:r[CM.TITLE]||'',short:r[CM.SHORT]||r[CM.TITLE]||'',vol:r[CM.VOL]||'',
+          qty:parseInt(r[CM.QTY]||0)||0,src:r[CM.SRC]||'',cogs:cogsMap[ean]||0,show:show});
+      });
+    }).catch(function(){});
+  });
+  Promise.all(proms).then(function(){updateCatalogStats();renderCatalog();showToast(allCatalog.length+' SKUs loaded','ok');});
+}
+function updateCatalogStats(){
+  var cv=allCatalog.map(function(p){return p.cogs;}).filter(function(v){return v>0;});
+  var ids=['cat-total','cat-active','cat-disabled','cat-oos','cat-avgcogs'];
+  var vals=[allCatalog.length,allCatalog.filter(function(p){return p.show;}).length,allCatalog.filter(function(p){return !p.show;}).length,allCatalog.filter(function(p){return p.qty===0;}).length,cv.length?'AED '+(cv.reduce(function(a,b){return a+b;},0)/cv.length).toFixed(2):'--'];
+  ids.forEach(function(id,i){var el=document.getElementById(id);if(el)el.textContent=vals[i];});
+}
+function setCatalogBrand(btn){document.querySelectorAll('#catalogBrandTabs .brand-tab').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');activeCatBrand=btn.dataset.brand;renderCatalog();}
+function renderCatalog(){
+  var search=(document.getElementById('catSearch')||{value:''}).value.toLowerCase();
+  var stock=(document.getElementById('catStockFilter')||{value:'ALL'}).value;
+  var show=(document.getElementById('catShowFilter')||{value:'ALL'}).value;
+  filteredCatalog=allCatalog.filter(function(p){
+    if(activeCatBrand!=='ALL'&&p._brand!==activeCatBrand)return false;
+    if(stock==='IN'&&p.qty===0)return false;if(stock==='OUT'&&p.qty>0)return false;
+    if(show==='ACTIVE'&&!p.show)return false;if(show==='HIDDEN'&&p.show)return false;
+    if(search){var h=(p.title+' '+p.short+' '+p.ean+' '+p.sku+' '+p.cat).toLowerCase();if(h.indexOf(search)===-1)return false;}
+    return true;
+  });
+  var tc=document.getElementById('catTableCount');if(tc)tc.textContent=filteredCatalog.length+' SKUs';
+  var cb=document.getElementById('catalogBody');if(!cb)return;
+  if(!filteredCatalog.length){cb.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="empty-title">No products found</div></div></td></tr>';return;}
+  cb.innerHTML=filteredCatalog.map(function(p){
+    var inS=p.qty>0;
+    return '<tr><td><div style="display:flex;align-items:center;gap:12px"><div class="prod-img">'+(p.imgUrl?'<img src="'+p.imgUrl+'" onerror="this.remove()">':p._brand)+'</div><div><div style="font-size:12px;font-weight:600;max-width:200px">'+(p.short||p.title||'').slice(0,50)+'</div><div style="font-size:10px;color:var(--muted);font-family:monospace">'+p.ean+'</div></div></div></td>'+
+    '<td><span class="cat-badge">'+(p.cat||'--')+'</span></td>'+
+    '<td style="font-weight:600">'+(p.cogs>0?'AED '+p.cogs.toFixed(2):'--')+'</td>'+
+    '<td><span style="font-size:12px;font-weight:600;color:'+(inS?'var(--green)':'var(--red)')+'">'+( p.qty>0?p.qty+' units':'Out of Stock')+'</span></td>'+
+    '<td style="font-size:11px;color:var(--muted)">'+(p.src||'--')+'</td>'+
+    '<td><span class="pill '+(p.show?'pill-green':'pill-muted')+'">'+(p.show?'Active':'Hidden')+'</span></td>'+
+    '<td><label class="toggle"><input type="checkbox" '+(p.show?'checked':'')+' data-id="'+p._id+'" onchange="togglePV(this.dataset.id,this.checked)"><span class="toggle-track"></span></label></td>'+
+    '<td><button class="btn" style="padding:6px 12px;font-size:11px" data-pid="'+p._id+'" onclick="openProductModal(this.dataset.pid)">View</button></td></tr>';
+  }).join('');
+}
+function togglePV(id,v){var p=allCatalog.find(function(x){return x._id===id;});if(p){p.show=v;updateCatalogStats();renderCatalog();showToast((v?'Enabled':'Hidden')+': '+(p.short||p.ean),v?'ok':'');}}
+function openProductModal(id){
+  var p=allCatalog.find(function(x){return x._id===id;});if(!p)return;
+  var mt=document.getElementById('modalTitle');if(mt)mt.textContent=p.short||p.title||p.ean;
+  var mb=document.getElementById('modalBody');if(mb)mb.innerHTML=(p.imgUrl?'<img src="'+p.imgUrl+'" style="width:100%;max-height:180px;object-fit:contain;border-radius:8px;background:var(--card);margin-bottom:20px;border:1px solid var(--border)">':'')+
+    '<div class="modal-grid">'+
+    '<div class="modal-field"><div class="modal-label">Brand</div><div class="modal-val">'+p._brandName+'</div></div>'+
+    '<div class="modal-field"><div class="modal-label">EAN</div><div class="modal-val mono">'+p.ean+'</div></div>'+
+    '<div class="modal-field"><div class="modal-label">SKU</div><div class="modal-val mono">'+(p.sku||'--')+'</div></div>'+
+    '<div class="modal-field"><div class="modal-label">COGS</div><div class="modal-val" style="color:var(--teal);font-weight:700">'+(p.cogs>0?'AED '+p.cogs.toFixed(2):'--')+'</div></div>'+
+    '<div class="modal-field"><div class="modal-label">Stock</div><div class="modal-val" style="color:'+(p.qty>0?'var(--green)':'var(--red)')+'">'+(p.qty>0?p.qty+' units':'Out of Stock')+'</div></div>'+
+    '<div class="modal-field"><div class="modal-label">Source</div><div class="modal-val">'+(p.src||'--')+'</div></div>'+
+    '<div class="modal-field"><div class="modal-label">Status</div><div class="modal-val" style="color:'+(p.show?'var(--green)':'var(--muted)')+'">'+(p.show?'Active':'Hidden')+'</div></div>'+
+    '</div>';
+  var mf=document.getElementById('modalFooter');if(mf)mf.innerHTML='<button class="btn" onclick="closeProductModal()">Close</button>';
+  var pm=document.getElementById('productModal');if(pm)pm.classList.add('open');
+}
+function closeProductModal(){var pm=document.getElementById('productModal');if(pm)pm.classList.remove('open');}
+
+function setOrderSub(btn,sub){
+  document.querySelectorAll('.ord-subnav').forEach(function(b){b.style.borderBottomColor='transparent';b.style.color='var(--muted)';});
+  btn.style.borderBottomColor='var(--amber)';btn.style.color='var(--ink)';
+  currentOrdSub=sub;
+  document.getElementById('sub-brand-orders').style.display=sub==='brand-orders'?'block':'none';
+  document.getElementById('sub-master-orders').style.display=sub==='master-orders'?'block':'none';
+  if(sub==='master-orders'&&allMasterOrders.length===0) loadMasterOrders();
+}
+function startAutoRefresh(){
+  stopAutoRefresh();
+  ordAutoRefresh=setInterval(function(){
+    if(currentOrdSub==='brand-orders')loadOrders(true);
+    else if(currentOrdSub==='master-orders')loadMasterOrders(true);
+  },30000);
+  var rd=document.getElementById('refreshDot');if(rd)rd.style.background='var(--green)';
+  var rl=document.getElementById('refreshLabel');if(rl)rl.textContent='Auto-refresh ON';
+}
+function stopAutoRefresh(){if(ordAutoRefresh)clearInterval(ordAutoRefresh);}
+
+function loadOrders(silent){
+  if(!silent){
+    var ob=document.getElementById('ordersBody');
+    if(ob)ob.innerHTML='<tr><td colspan="9" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div></td></tr>';
+    var ot=document.getElementById('ordTableCount');if(ot)ot.textContent='Loading...';
+  }
+  allOrders=[];
+  var proms=Object.entries(BRANDS).map(function(e){
+    var code=e[0],brand=e[1];
+    return fetch('https://sheets.googleapis.com/v4/spreadsheets/'+brand.id+'/values/Order_Record!A2:Q2000?key='+API_KEY)
+    .then(function(r){return r.json();})
+    .then(function(data){
+      (data.values||[]).forEach(function(r,i){
+        if(!(r[OC.EAN]||'').toString().trim())return;
+        allOrders.push({_id:code+'-'+i,_brand:code,_brandName:brand.name,_brandColor:brand.color,_row:i+2,
+          timestamp:r[OC.TIMESTAMP]||'',orderId:r[OC.ORDER_ID]||'',name:r[OC.NAME]||'',
+          contact:r[OC.CONTACT]||'',address:r[OC.ADDRESS]||'',ean:r[OC.EAN]||'',
+          sku:r[OC.SKU]||'',brand:r[OC.BRAND]||brand.name,category:r[OC.CATEGORY]||'',
+          title:r[OC.TITLE]||'',cogs:parseFloat(r[OC.COGS]||0)||0,
+          goAhead:(r[OC.GO_AHEAD]||'').toString().toUpperCase()==='YES',
+          masterStatus:(r[OC.MASTER_STATUS]||'').toString().trim()});
+      });
+    }).catch(function(){});
+  });
+  Promise.all(proms).then(function(){
+    updateOrderStats();renderOrders();
+    var lr=document.getElementById('lastRefreshTime');if(lr)lr.textContent='Last: '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Dubai'});
+    if(!silent)showToast(allOrders.length+' rows loaded','ok');
+  });
+}
+function groupOrders(rows){
+  var map={};
+  rows.forEach(function(o){var k=o._brand+'__'+(o.orderId||o.contact+'__'+o._brand);if(!map[k])map[k]={key:k,_lead:o,rows:[],totalCogs:0};map[k].rows.push(o);map[k].totalCogs+=o.cogs;});
+  Object.values(map).forEach(function(g){g._lead=g.rows[0];});
+  return Object.values(map);
+}
+function updateOrderStats(){
+  var g=groupOrders(allOrders);
+  var p=g.filter(function(x){return !x._lead.goAhead&&!x._lead.masterStatus;}).length;
+  var a=g.filter(function(x){return x._lead.goAhead&&!x._lead.masterStatus;}).length;
+  var s=g.filter(function(x){return x._lead.masterStatus==='Sent to Master';}).length;
+  var c=allOrders.reduce(function(s,o){return s+o.cogs;},0);
+  var ids=['ord-total','ord-pending','ord-approved','ord-sent','ord-cogs'];
+  var vals=[g.length,p,a,s,'AED '+c.toFixed(0)];
+  ids.forEach(function(id,i){var el=document.getElementById(id);if(el)el.textContent=vals[i];});
+  var badge=document.getElementById('ordersBadge');
+  if(badge){if(p>0){badge.textContent=p;badge.style.display='';}else badge.style.display='none';}
+}
+function setOrderBrand(btn){document.querySelectorAll('#ordBrandTabs .brand-tab').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');activeOrdBrand=btn.dataset.brand;renderOrders();}
+function renderOrders(){
+  var search=(document.getElementById('ordSearch')||{value:''}).value.toLowerCase();
+  var status=(document.getElementById('ordStatusFilter')||{value:'ALL'}).value;
+  var source=activeOrdBrand==='ALL'?allOrders:allOrders.filter(function(o){return o._brand===activeOrdBrand;});
+  filteredOrders=source.filter(function(o){
+    if(status==='PENDING'&&(o.goAhead||o.masterStatus))return false;
+    if(status==='APPROVED'&&(!o.goAhead||o.masterStatus))return false;
+    if(status==='SENT'&&o.masterStatus!=='Sent to Master')return false;
+    if(search){var h=(o.name+' '+o.contact+' '+o.sku+' '+o.ean+' '+o.title).toLowerCase();if(h.indexOf(search)===-1)return false;}
+    return true;
+  });
+  var groups=groupOrders(filteredOrders);
+  var ot=document.getElementById('ordTableCount');if(ot)ot.textContent=groups.length+' orders, '+filteredOrders.length+' SKUs';
+  var ob=document.getElementById('ordersBody');if(!ob)return;
+  if(!groups.length){ob.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="empty-title">No orders found</div></div></td></tr>';return;}
+  var BC={BH:'rgba(62,207,142,0.1);color:#3ECF8E',MP:'rgba(167,139,250,0.1);color:#A78BFA',VL:'rgba(230,72,51,0.1);color:#E64833',MF:'rgba(245,166,35,0.1);color:#F5A623'};
+  ob.innerHTML=groups.map(function(g){
+    var o=g._lead,isSent=o.masterStatus==='Sent to Master',isSel=selectedOrdIds.has(g.key);
+    var ini=o.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase()||'??';
+    var dt=o.timestamp?new Date(o.timestamp).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'--';
+    var ga=isSent?'<span class="pill pill-green">Sent</span>':
+      o.goAhead?'<div style="display:flex;align-items:center;gap:8px"><span class="pill pill-green">YES</span>'+('<button data-k="'+g.key+'" data-b="'+o._brand+'" data-r="'+o._row+'" onclick="revokeGoAhead(this.dataset.k,this.dataset.b,this.dataset.r)" style="font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline">revoke</button></div>'):
+      '<button data-k="'+g.key+'" data-b="'+o._brand+'" data-r="'+o._row+'" onclick="giveGoAhead(this.dataset.k,this.dataset.b,this.dataset.r)" style="padding:5px 12px;background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.3);border-radius:6px;color:var(--green);font-size:11px;font-weight:600;cursor:pointer">Give Go-Ahead</button>';
+    var bc=BC[o._brand]||'rgba(90,106,126,0.1);color:var(--muted)';
+    var skus=g.rows.slice(0,3).map(function(r){return '<div style="font-size:10px;color:var(--muted);font-family:monospace;line-height:1.5">'+(r.title||r.sku||r.ean).slice(0,40)+'</div>';}).join('');
+    if(g.rows.length>3)skus+='<div style="font-size:10px;color:var(--teal)">+'+(g.rows.length-3)+' more</div>';
+    return '<tr class="'+(isSel?'tr-selected':'')+'" data-key="'+g.key+'">'+
+      '<td><input type="checkbox" class="cb" '+(isSel?'checked':'')+' '+(isSent?'disabled':'')+' onchange="toggleOrdSelect(\"+g.key+\",this.checked)"></td>'+
+      '<td><div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:'+o._brandColor+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#070A0F;flex-shrink:0">'+ini+'</div><div><div style="font-weight:600;font-size:12px">'+o.name+'</div><div style="font-size:10px;color:var(--muted);font-family:monospace">'+o.contact+'</div></div></div></td>'+
+      '<td><span style="padding:4px 10px;border-radius:100px;font-size:10px;font-weight:600;border:1px solid;background:'+bc.split(';')[0]+';'+bc.split(';')[1]+'">'+o._brand+'</span></td>'+
+      '<td>'+skus+'</td>'+
+      '<td><div style="font-weight:600;font-size:13px">AED '+g.totalCogs.toFixed(2)+'</div><div style="font-size:10px;color:var(--muted)">'+g.rows.length+' SKUs</div></td>'+
+      '<td>'+ga+'</td>'+
+      '<td>'+(isSent?'<span class="pill pill-green">Sent</span>':'<span class="pill pill-muted">Not sent</span>')+'</td>'+
+      '<td style="font-size:11px;color:var(--muted)">'+dt+'</td>'+
+      '<td><button class="btn" style="padding:6px 12px;font-size:11px" onclick="openOrderDrawer(\"+g.key+\")">View</button></td>'+
+    '</tr>';
+  }).join('');
+}
+function giveGoAhead(key,brand,row){writeGoAhead(key,brand,row,'Yes');}
+function revokeGoAhead(key,brand,row){writeGoAhead(key,brand,row,'');}
+function writeGoAhead(key,brand,row,value){
+  var group=allOrders.filter(function(o){return (o._brand+'__'+(o.orderId||o.contact+'__'+o._brand))===key;});
+  group.forEach(function(o){o.goAhead=value==='Yes';});
+  updateOrderStats();renderOrders();
+  fetch(BRAND_WEBAPPS[brand],{method:'POST',mode:'no-cors',body:JSON.stringify({action:'setGoAhead',rows:group.map(function(o){return {row:o._row,value:value};})}),headers:{'Content-Type':'application/json'}})
+  .then(function(){showToast((value==='Yes'?'Go-Ahead given':'Revoked')+': '+(group[0]?group[0].name:''),value?'ok':'');})
+  .catch(function(){showToast('Updated locally','');});
+}
+function bulkApproveOrders(){selectedOrdIds.forEach(function(key){var g=allOrders.filter(function(o){return (o._brand+'__'+(o.orderId||o.contact+'__'+o._brand))===key;});if(g.length)writeGoAhead(key,g[0]._brand,g[0]._row,'Yes');});clearOrderSelection();}
+function bulkRevokeOrders(){selectedOrdIds.forEach(function(key){var g=allOrders.filter(function(o){return (o._brand+'__'+(o.orderId||o.contact+'__'+o._brand))===key;});if(g.length)writeGoAhead(key,g[0]._brand,g[0]._row,'');});clearOrderSelection();}
+function toggleOrdSelect(key,checked){if(checked)selectedOrdIds.add(key);else selectedOrdIds.delete(key);updateOrdBulkBar();var r=document.querySelector('tr[data-key="'+key+'"]');if(r)r.classList.toggle('tr-selected',checked);}
+function toggleOrdSelectAll(){var checked=document.getElementById('ordSelectAll').checked;groupOrders(filteredOrders).filter(function(g){return !g._lead.masterStatus;}).forEach(function(g){if(checked)selectedOrdIds.add(g.key);else selectedOrdIds.delete(g.key);});renderOrders();updateOrdBulkBar();}
+function clearOrderSelection(){selectedOrdIds.clear();var sa=document.getElementById('ordSelectAll');if(sa)sa.checked=false;renderOrders();updateOrdBulkBar();}
+function updateOrdBulkBar(){var bar=document.getElementById('ordBulkBar'),cnt=document.getElementById('ordBulkCount');if(bar)bar.style.display=selectedOrdIds.size>0?'flex':'none';if(cnt)cnt.textContent=selectedOrdIds.size+' selected';}
+function sendApprovedToMaster(){
+  var approved=groupOrders(allOrders).filter(function(g){return g._lead.goAhead&&!g._lead.masterStatus;});
+  if(!approved.length){showToast('No approved orders -- give Go-Ahead first','err');return;}
+  var btn=document.getElementById('sendMasterBtn');if(btn){btn.disabled=true;btn.textContent='Sending...';}
+  var byBrand={};approved.forEach(function(g){var b=g._lead._brand;if(!byBrand[b])byBrand[b]=[];byBrand[b].push(g);});
+  var pending=Object.keys(byBrand).length,done=0;
+  Object.entries(byBrand).forEach(function(e){
+    var brand=e[0],groups=e[1];
+    fetch(BRAND_WEBAPPS[brand],{method:'POST',mode:'no-cors',body:JSON.stringify({action:'sendToMaster'}),headers:{'Content-Type':'application/json'}})
+    .then(function(){groups.forEach(function(g){g.rows.forEach(function(o){o.masterStatus='Sent to Master';});});done++;updateOrderStats();renderOrders();if(done===pending)showToast(approved.length+' orders sent to Master','ok');})
+    .catch(function(){showToast('Run from sheet menu if needed','');})
+    .finally(function(){if(btn){btn.disabled=false;btn.textContent='Send Approved to Master';}});
+  });
+}
+function openOrderDrawer(key){
+  var group=groupOrders(allOrders).find(function(g){return g.key===key;});if(!group)return;
+  var o=group._lead,isSent=o.masterStatus==='Sent to Master';
+  var dt=document.getElementById('drawerTitle');if(dt)dt.textContent=o.name+' - '+o._brandName;
+  var rows='';
+  group.rows.forEach(function(r){rows+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 12px"><div style="font-weight:600;font-size:12px">'+(r.sku||'--')+'</div><div style="font-size:10px;color:var(--muted)">'+(r.title||'').slice(0,48)+'</div></td><td style="padding:8px 12px;font-family:monospace;font-size:11px;color:var(--muted)">'+r.ean+'</td><td style="padding:8px 12px;text-align:right;font-weight:600">AED '+r.cogs.toFixed(2)+'</td></tr>';});
+  var db=document.getElementById('drawerBody');
+  if(db)db.innerHTML='<div style="padding:14px;background:var(--card);border-radius:var(--r);border:1px solid var(--border);margin-bottom:16px"><div style="font-weight:700;font-size:14px">'+o.name+'</div><div style="font-size:11px;color:var(--muted)">'+o._brandName+' - '+o.contact+'</div><div style="font-size:11px;color:var(--muted);margin-top:4px">'+o.address+'</div></div><table style="width:100%;border-collapse:collapse"><tbody>'+rows+'<tr><td colspan="2" style="padding:8px 12px;font-weight:700">Total</td><td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--teal)">AED '+group.totalCogs.toFixed(2)+'</td></tr></tbody></table>';
+  var df=document.getElementById('drawerFooter');
+  if(df)df.innerHTML=isSent?'<div style="font-size:12px;color:var(--muted)">Sent to Master Order Sheet</div>':
+    '<button class="btn" style="flex:1;background:'+(o.goAhead?'rgba(230,72,51,0.1)':'rgba(62,207,142,0.12)')+';border-color:'+(o.goAhead?'rgba(230,72,51,0.3)':'rgba(62,207,142,0.3)')+';color:'+(o.goAhead?'var(--red)':'var(--green)')+';padding:11px" onclick="drawerToggleGoAhead(\\"key\\",\\"o._brand\\",'+o._row+','+(!o.goAhead)+')">'+(o.goAhead?'Revoke Go-Ahead':'Give Go-Ahead')+'</button><button class="btn" style="flex:1;padding:11px" onclick="closeOrderDrawer()">Close</button>';
+  var oo=document.getElementById('ordDrawerOverlay');if(oo)oo.style.display='block';
+  var od=document.getElementById('ordDrawer');if(od)od.style.right='0';
+}
+function drawerToggleGoAhead(key,brand,row,value){writeGoAhead(key,brand,row,value?'Yes':'');closeOrderDrawer();}
+function closeOrderDrawer(){var oo=document.getElementById('ordDrawerOverlay');if(oo)oo.style.display='none';var od=document.getElementById('ordDrawer');if(od)od.style.right='-580px';}
+
+// MASTER ORDERS
+function loadMasterOrders(silent){
+  if(!silent){
+    var mb=document.getElementById('masterOrdersBody');
+    if(mb)mb.innerHTML='<tr><td colspan="13" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div><div class="skeleton" style="width:60%"></div></td></tr>';
+    var mc=document.getElementById('mstTableCount');if(mc)mc.textContent='Loading...';
+  }
+  fetch(MASTER_WEBAPP+'?action=getOrders',{redirect:'follow',method:'GET'})
+  .then(function(res){
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    return res.text();
+  })
+  .then(function(text){
+    var json=JSON.parse(text);
+    if(!json.success)throw new Error(json.error||'Apps Script error');
+        allMasterOrders=(json.rows||[]).map(function(r){
+      return {
+        _row:         r._row||0,
+        timestamp:    r['ORDER_TIMESTAMP']||'',
+        orderId:      r['ORDER_ID']||'',
+        name:         r['NAME']||'',
+        contact:      (r['CONTACT NUMBER']||'').toString(),
+        address:      r['ADDRESS']||'',
+        ean:          r['EAN']||'',
+        asin:         r['ASIN']||'',
+        sku:          r['SKU']||'',
+        brand:        r['BRAND']||'',
+        category:     r['CATEGORY']||'',
+        title:        r['TITLE']||'',
+        cogs:         parseFloat(r['COGS']||0)||0,
+        availQty:     r['AVAILABLE QUANTITY']||'',
+        stockSource:  r['STOCK SOURCE VALUE']||'',
+        goAhead:      r['SELECTION GO AHEAD FOR DISPATCH']||'',
+        lot:          (r['LOT NUMBER']||'').toString().trim(),
+        skuStatus:    r['SKU FILE STATUS']||'',
+        emailStatus:  r['EMAIL STATUS']||'',
+        skuLink:      r['SKU FILE LINK']||'',
+        shp:          r['INTERNAL SHIPMENT S. NUMBER']||r['SHIPMENT NUMBER']||r['SHP_NUMBER']||'',
+        packing:      (r['SKU PACKING APPROVAL']||r['SKU PACKING APPROVAL ']||'').toString().trim(),
+        driveLink:    (function(){
+          var v=(r['FSL PACKING LIST PDF REPOSITORY FOLDER LINK']||'').toString().trim();
+          if(!v)return '';
+          var um=v.match(/https?:\/\/[^\s"]+/);
+          if(um)return um[0];
+          // Folder name only — build a Drive search link
+          return 'https://drive.google.com/drive/search?q='+encodeURIComponent(v);
+        })()
+      };
+    });
+    updateMasterStats();renderMasterOrders();
+    var lr=document.getElementById('mstLastRefresh');if(lr)lr.textContent='Refreshed: '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Dubai'});
+    var mstRefEl=document.getElementById('mstLastRefresh');
+    if(mstRefEl)mstRefEl.textContent='Last refresh: '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Dubai'});
+    if(!silent)showToast(allMasterOrders.length+' rows loaded from Master','ok');
+  })
+  .catch(function(e){
+    console.error('Master fetch error:',e);
+    var mb=document.getElementById('masterOrdersBody');
+    if(mb)mb.innerHTML='<tr><td colspan="13"><div class="empty-state"><div class="empty-icon">!</div><div class="empty-title">Cannot load Master Orders</div><div class="empty-sub">'+e.message+'<br><br>Check: Apps Script deployed as Web App / Execute as: Me / Who has access: Anyone / Re-deploy as new version after code changes</div></div></td></tr>';
+    var mc=document.getElementById('mstTableCount');if(mc)mc.textContent='Load failed';
+  });
+}
+function updateMasterStats(){
+  var total=allMasterOrders.length;
+  var noLot=allMasterOrders.filter(function(r){return !r.lot;}).length;
+  var csvPending=allMasterOrders.filter(function(r){return r.lot&&r.skuStatus==='Pending';}).length;
+  var csvDone=allMasterOrders.filter(function(r){return r.skuStatus==='Done';}).length;
+  var emailPending=allMasterOrders.filter(function(r){return r.skuStatus==='Done'&&r.emailStatus!=='Sent';}).length;
+  var sent=allMasterOrders.filter(function(r){return r.emailStatus==='Sent';}).length;
+  var approved=allMasterOrders.filter(function(r){return r.packing==='Approved';}).length;
+  var pendingPack=allMasterOrders.filter(function(r){return r.emailStatus==='Sent'&&!r.packing;}).length;
+
+  function se(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
+  se('mst-total',total); se('mst-nolot',noLot); se('mst-csv',csvDone);
+  se('mst-sent',sent);   se('mst-approved',approved); se('mst-pending-pack',pendingPack);
+
+  // Action button context badges
+  se('pendingLotCount',  noLot>0?'('+noLot+' rows unassigned)':'(all done)');
+  se('pendingCSVCount',  csvPending>0?'('+csvPending+' rows pending)':'(all done)');
+  se('pendingSHPCount',  emailPending>0?'('+emailPending+' rows ready to email)':'(all done)');
+
+  // Populate lot dropdown dynamically from live data
+  var lotSel=document.getElementById('mstLotFilter');
+  if(lotSel){
+    var cur=lotSel.value;
+    var lots=[...new Set(allMasterOrders.map(function(r){return r.lot;}).filter(Boolean))].sort(function(a,b){return parseInt(a)-parseInt(b);});
+    lotSel.innerHTML='<option value="ALL">All Lots</option>';
+    lots.forEach(function(lot){
+      var count=allMasterOrders.filter(function(r){return r.lot===lot;}).length;
+      var opt=document.createElement('option');
+      opt.value=lot; opt.textContent='Lot '+lot+' ('+count+' SKUs)';
+      lotSel.appendChild(opt);
+    });
+    if(cur&&cur!=='ALL') lotSel.value=cur;
+  }
+}
+function renderMasterOrders(){
+  var search=(document.getElementById('mstSearch')||{value:''}).value.toLowerCase();
+  var brand=(document.getElementById('mstBrandFilter')||{value:'ALL'}).value;
+  var sort=(document.getElementById('mstSortFilter')||{value:'CONTACT'}).value;
+  var status=(document.getElementById('mstStatusFilter')||{value:'ALL'}).value;
+  var lotF=(document.getElementById('mstLotFilter')||{value:'ALL'}).value;
+  var packF=(document.getElementById('mstPackFilter')||{value:'ALL'}).value;
+  var skuSF=(document.getElementById('mstSkuStatusFilter')||{value:'ALL'}).value;
+  var emailF=(document.getElementById('mstEmailFilter')||{value:'ALL'}).value;
+
+  var rows=allMasterOrders.filter(function(r){
+    if(brand!=='ALL'&&r.brand!==brand)return false;
+    if(lotF!=='ALL'&&r.lot!==lotF)return false;
+    if(packF==='blank'&&r.packing)return false;
+    if(packF==='Approved'&&r.packing!=='Approved')return false;
+    if(packF==='Rejected'&&r.packing!=='Rejected')return false;
+    if(skuSF!=='ALL'&&r.skuStatus!==skuSF)return false;
+    if(emailF==='sent'&&r.emailStatus!=='Sent')return false;
+    if(emailF==='pending'&&r.emailStatus==='Sent')return false;
+    if(status==='NOLOT'&&r.lot)return false;
+    if(status==='LOT'&&!r.lot)return false;
+    if(status==='CSV'&&r.skuStatus!=='Done')return false;
+    if(status==='SENT'&&r.emailStatus!=='Sent')return false;
+    if(status==='PENDING_PACK'&&!(r.emailStatus==='Sent'&&!r.packing))return false;
+    if(status==='APPROVED'&&r.packing!=='Approved')return false;
+    if(status==='REJECTED'&&r.packing!=='Rejected')return false;
+    if(status==='NO_DRIVE'&&r.driveLink)return false;
+    if(search){var h=(r.name+' '+r.contact+' '+r.shp+' '+r.lot+' '+r.sku+' '+r.ean+' '+r.brand+' '+r.category).toLowerCase();if(h.indexOf(search)===-1)return false;}
+    return true;
+  });
+  rows.sort(function(a,b){
+    if(sort==='CONTACT')return a.contact.localeCompare(b.contact);
+    if(sort==='LOT')return (parseInt(a.lot)||0)-(parseInt(b.lot)||0);
+    if(sort==='SHP')return (a.shp||'').localeCompare(b.shp||'');
+    if(sort==='DATE')return new Date(a.timestamp)-new Date(b.timestamp);
+    if(sort==='BRAND')return (a.brand||'').localeCompare(b.brand||'');
+    if(sort==='COGS')return (b.cogs||0)-(a.cogs||0);
+    return 0;
+  });
+  var mc=document.getElementById('mstTableCount');if(mc)mc.textContent=rows.length+' rows';
+  var mb=document.getElementById('masterOrdersBody');if(!mb)return;
+  if(!rows.length){mb.innerHTML='<tr><td colspan="13"><div class="empty-state"><div class="empty-title">No rows found</div><div class="empty-sub">Adjust filters or send orders from Brand Orders first</div></div></td></tr>';return;}
+  var BC={'Botanic Hearth':'rgba(62,207,142,0.1);color:#3ECF8E','Majestic Pure':'rgba(167,139,250,0.1);color:#A78BFA','Villain':'rgba(230,72,51,0.1);color:#E64833','My Fitness':'rgba(245,166,35,0.1);color:#F5A623'};
+  mb.innerHTML=rows.map(function(r){
+    var bc=BC[r.brand]||'rgba(90,106,126,0.1);color:var(--muted)';
+    var dt=r.timestamp?new Date(r.timestamp).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'--';
+    var isSel=selectedMstRows.has(r._row);
+    var skuStatusCell=r.skuStatus==='Done'?(r.skuLink?'<a href="'+r.skuLink+'" target="_blank" style="color:var(--green);font-size:11px;text-decoration:none"><span class="pill pill-green">Done-CSV</span></a>':'<span class="pill pill-green">Done</span>'):'<span class="pill pill-muted">--</span>';
+    var packCell=r.packing==='Approved'?'<span class="pill pill-green">Approved</span>':
+      r.packing==='Rejected'?'<span class="pill pill-red">Rejected</span>':
+      '<select class="pack-select" onchange="setSinglePacking('+r._row+',this.value,this)"><option value="">-- Pending --</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option></select>';
+    var driveCell=r.driveLink?
+      '<a href="'+r.driveLink+'" target="_blank" style="font-size:11px;color:var(--teal);text-decoration:none;display:flex;align-items:center;gap:4px">Open Folder</a>':
+      '<button data-lot="'+r.lot+'" onclick="openDriveLinkModal(this.dataset.lot)" style="font-size:11px;background:none;border:1px dashed var(--border-l);border-radius:6px;padding:4px 9px;color:var(--muted);cursor:pointer">+ Add Link</button>';
+    var canSelect=r.emailStatus==='Sent'&&!r.packing;
+    return '<tr class="'+(isSel?'tr-selected':'')+'" data-mrow="'+r._row+'">'+
+      '<td>'+(canSelect?'<input type="checkbox" class="cb" '+(isSel?'checked':'')+' onchange="toggleMstSelect('+r._row+',this.checked)">':'<span style="color:var(--dim);font-size:10px">-</span>')+'</td>'+
+      '<td><div style="font-weight:600;font-size:12px">'+r.name+'</div></td>'+
+      '<td style="font-family:monospace;font-size:11px;color:var(--muted)">'+r.contact+'</td>'+
+      '<td><span style="padding:3px 9px;border-radius:100px;font-size:10px;font-weight:600;background:'+bc.split(';')[0]+';'+bc.split(';')[1]+'">'+r.brand+'</span></td>'+
+      '<td><div style="font-size:11px;font-weight:600">'+(r.sku||'--')+'</div><div style="font-size:10px;color:var(--muted)">'+(r.title||'').slice(0,36)+'</div></td>'+
+      '<td style="font-weight:600;font-size:12px">'+(r.cogs>0?'AED '+r.cogs.toFixed(2):'--')+'</td>'+
+      '<td>'+(r.lot?'<span class="pill pill-blue">Lot '+r.lot+'</span>':'<span class="pill pill-muted">--</span>')+'</td>'+
+      '<td style="font-family:monospace;font-size:10px;color:var(--teal)">'+(r.shp||'<span style="color:var(--muted)">--</span>')+'</td>'+
+      '<td>'+skuStatusCell+'</td>'+
+      '<td>'+(r.emailStatus==='Sent'?'<span class="pill pill-green">Sent</span>':'<span class="pill pill-muted">--</span>')+'</td>'+
+      '<td>'+packCell+'</td>'+
+      '<td>'+driveCell+'</td>'+
+      '<td style="font-size:11px;color:var(--muted)">'+dt+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// Master selection for bulk packing
+function toggleMstSelect(row,checked){
+  if(checked)selectedMstRows.add(row);else selectedMstRows.delete(row);
+  updateMstBulkBar();
+  var tr=document.querySelector('tr[data-mrow="'+row+'"]');if(tr)tr.classList.toggle('tr-selected',checked);
+}
+function toggleMstSelectAll(){
+  var checked=document.getElementById('mstSelectAll').checked;
+  allMasterOrders.filter(function(r){return r.emailStatus==='Sent'&&!r.packing;}).forEach(function(r){if(checked)selectedMstRows.add(r._row);else selectedMstRows.delete(r._row);});
+  renderMasterOrders();updateMstBulkBar();
+}
+function clearMstSelection(){selectedMstRows.clear();var sa=document.getElementById('mstSelectAll');if(sa)sa.checked=false;renderMasterOrders();updateMstBulkBar();}
+function updateMstBulkBar(){
+  var bar=document.getElementById('mstBulkBar'),cnt=document.getElementById('mstBulkCount');
+  if(bar)bar.style.display=selectedMstRows.size>0?'flex':'none';
+  if(cnt)cnt.textContent=selectedMstRows.size+' rows selected';
+}
+
+// Single row packing approval
+function setSinglePacking(row,value,selectEl){
+  if(!value)return;
+  if(selectEl)selectEl.disabled=true;
+  var item=allMasterOrders.find(function(r){return r._row===row;});
+  if(item)item.packing=value;
+  fetch(MASTER_WEBAPP,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'setPackingApproval',rows:[{row:row,value:value}]}),headers:{'Content-Type':'application/json'}})
+  .then(function(){showToast(value+' saved for row '+row,'ok');renderMasterOrders();})
+  .catch(function(){showToast('Saved locally','');renderMasterOrders();})
+  .finally(function(){if(selectEl)selectEl.disabled=false;});
+}
+
+// Bulk packing approval
+function bulkSetPacking(value){
+  if(!selectedMstRows.size){showToast('Select rows first','err');return;}
+  var rows=[];
+  selectedMstRows.forEach(function(row){
+    var item=allMasterOrders.find(function(r){return r._row===row;});
+    if(item){item.packing=value;rows.push({row:row,value:value});}
+  });
+  fetch(MASTER_WEBAPP,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'setPackingApproval',rows:rows}),headers:{'Content-Type':'application/json'}})
+  .then(function(){showToast(value+' set for '+rows.length+' rows','ok');})
+  .catch(function(){showToast('Saved locally','');});
+  clearMstSelection();
+  renderMasterOrders();
+}
+
+// Drive link modal
+function openDriveLinkModal(lotNumber){
+  if(!lotNumber||lotNumber==='undefined'){showToast('Assign a lot number first before adding drive link','err');return;}
+  var existing=allMasterOrders.find(function(r){return r.lot===lotNumber&&r.driveLink;});
+  var link=existing?existing.driveLink:'';
+  var mt=document.getElementById('modalTitle');if(mt)mt.textContent='Drive Folder Link - Lot '+lotNumber;
+  var mb=document.getElementById('modalBody');if(mb)mb.innerHTML='<p style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:16px">Paste the Google Drive folder link for FSL Packing List PDFs for <strong>Lot '+lotNumber+'</strong>. This link will be saved to col W for all rows in this lot.</p><div class="modal-field"><div class="modal-label">Drive Folder URL</div><input id="driveLinkInput" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;color:var(--ink);font-size:12px;width:100%;outline:none;font-family:monospace" placeholder="https://drive.google.com/drive/folders/..." value="'+link+'"><p style="font-size:11px;color:var(--muted);margin-top:8px">Applied to all '+allMasterOrders.filter(function(r){return r.lot===lotNumber;}).length+' rows in Lot '+lotNumber+'</p></div>';
+  var mf=document.getElementById('modalFooter');if(mf)mf.innerHTML='<button class="btn" onclick="closeProductModal()">Cancel</button><button class="btn btn-primary" onclick="saveDriveLink(\\"lotNumber\\")">Save for All Lot '+lotNumber+' Rows</button>';
+  var pm=document.getElementById('productModal');if(pm)pm.classList.add('open');
+}
+function saveDriveLink(lotNumber){
+  var inp=document.getElementById('driveLinkInput');if(!inp)return;
+  var link=inp.value.trim();
+  if(!link||link.indexOf('http')!==0){showToast('Please enter a valid URL','err');return;}
+  allMasterOrders.filter(function(r){return r.lot===lotNumber;}).forEach(function(r){r.driveLink=link;});
+  closeProductModal();renderMasterOrders();
+  fetch(MASTER_WEBAPP,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'setDriveLink',lotNumber:lotNumber,link:link}),headers:{'Content-Type':'application/json'}})
+  .then(function(){showToast('Drive link saved for Lot '+lotNumber+' (all rows)','ok');})
+  .catch(function(){showToast('Saved locally','');});
+}
+
+// Master action buttons
+function callMasterAction(action){
+  var btnMap={assignLots:'assignLotsBtn',generateCSV:'generateCSVBtn',shareWarehouse:'shareWHBtn'};
+  var labels={assignLots:'Step 1: Assigning lot numbers...',generateCSV:'Step 2: Generating CSVs...',shareWarehouse:'Step 3: Emailing warehouse...'};
+  var done={
+    assignLots:'Lot numbers assigned to all unassigned rows. Refresh to see.',
+    generateCSV:'CSVs generated for all lots with status=Pending. Check Drive folder.',
+    shareWarehouse:'Email sent to warehouse. SHP numbers assigned to each influencer.'
+  };
+  var btn=document.getElementById(btnMap[action]);
+  var orig=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent=labels[action];}
+  fetch(MASTER_WEBAPP,{method:'POST',mode:'no-cors',body:JSON.stringify({action:action}),headers:{'Content-Type':'application/json'}})
+  .then(function(){showToast(done[action],'ok');setTimeout(function(){loadMasterOrders(true);},3000);})
+  .catch(function(){showToast('Run from Master sheet menu if needed','');})
+  .finally(function(){if(btn){btn.disabled=false;btn.textContent=orig;}});
+}
+
+// Toggle individual step buttons
+function toggleStepButtons(){
+  var row=document.getElementById('stepButtonsRow');
+  var btn=document.getElementById('toggleStepsBtn');
+  if(!row||!btn)return;
+  var showing=row.style.display==='flex';
+  row.style.display=showing?'none':'flex';
+  btn.innerHTML='Individual Steps '+(showing?'&#9660;':'&#9650;');
+}
+
+// Combined dispatch: runs all 3 steps in sequence with delay between
+function runFullDispatch(){
+  var btn=document.getElementById('fullDispatchBtn');
+  if(!btn)return;
+
+  // Count what will be affected
+  var unassigned=allMasterOrders.filter(function(r){return !r.lot;}).length;
+  var csvPending=allMasterOrders.filter(function(r){return r.lot&&r.skuStatus==='Pending';}).length;
+  var emailPending=allMasterOrders.filter(function(r){return r.skuStatus==='Done'&&r.emailStatus!=='Sent';}).length;
+
+  if(unassigned===0&&csvPending===0&&emailPending===0){
+    showToast('Nothing to process — all rows are already dispatched','ok');
+    return;
+  }
+
+  var msg='This will run all 3 steps:\n';
+  if(unassigned>0) msg+='Step 1: Assign lot numbers to '+unassigned+' rows\n';
+  if(csvPending>0) msg+='Step 2: Generate CSVs for '+csvPending+' pending rows\n';
+  if(emailPending>0) msg+='Step 3: Email warehouse + assign SHP numbers\n';
+  msg+='\nProceed?';
+
+  if(!confirm(msg))return;
+
+  btn.disabled=true;
+  btn.textContent='Processing...';
+
+  var steps=[];
+  if(unassigned>0)  steps.push({action:'assignLots',  label:'Assigning lots...',   wait:4000});
+  if(csvPending>0||steps.length>0) steps.push({action:'generateCSV', label:'Generating CSVs...', wait:6000});
+  if(emailPending>0||steps.length>0) steps.push({action:'shareWarehouse',label:'Emailing warehouse...',wait:4000});
+
+  function runStep(idx){
+    if(idx>=steps.length){
+      btn.disabled=false;
+      btn.innerHTML='&#128640; Process & Dispatch All';
+      showToast('All 3 steps complete — refresh to see updated data','ok');
+      setTimeout(function(){loadMasterOrders(true);},2000);
+      return;
+    }
+    var step=steps[idx];
+    btn.textContent='Step '+(idx+1)+'/'+steps.length+': '+step.label;
+    fetch(MASTER_WEBAPP,{method:'POST',mode:'no-cors',
+      body:JSON.stringify({action:step.action}),
+      headers:{'Content-Type':'application/json'}})
+    .then(function(){
+      showToast('Step '+(idx+1)+' done — '+step.label.replace('...',''),'ok');
+      setTimeout(function(){runStep(idx+1);},step.wait);
+    })
+    .catch(function(){
+      showToast('Step '+(idx+1)+' failed — check sheet','err');
+      btn.disabled=false;
+      btn.innerHTML='&#128640; Process & Dispatch All';
+    });
+  }
+  runStep(0);
+}
+
+// Toast
+var _tt;
+function showToast(msg,type){
+  var t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=msg;t.className='show '+(type||'');
+  clearTimeout(_tt);_tt=setTimeout(function(){t.className='';},3000);
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeProductModal();if((e.metaKey||e.ctrlKey)&&e.key==='['){e.preventDefault();toggleSidebar();}});
+
+initSession();
+loadHomeStats();
+</script>
+</body>
+</html>
