@@ -1826,8 +1826,13 @@ function renderMasterOrders() {
       ? `<span class="pill pill-green">Sent</span>`
       : `<span class="pill pill-muted">—</span>`;
     const bc           = brandColor[r.brand] || 'rgba(90,106,126,0.1);color:var(--muted)';
-    const isSent_pack  = r.packing === 'Approved';
-    const isRejected   = r.packing === 'Rejected';
+    const isSent_pack  = (r.packing||'').trim() === 'Approved';
+    const isRejected   = (r.packing||'').trim() === 'Rejected';
+    const packPill     = isSent_pack
+      ? `<span class="pill pill-green">&#10003; Approved</span>`
+      : isRejected
+        ? `<span class="pill pill-red">&#10005; Rejected</span>`
+        : `<span class="pill pill-muted">Pending</span>`;
     const dt = r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
     return `<tr>
       <td>
