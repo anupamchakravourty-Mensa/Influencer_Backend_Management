@@ -1739,7 +1739,7 @@ async function loadMasterOrders(silent) {
       emailStatus: r['EMAIL STATUS']           || '',
       skuLink:     r['SKU FILE LINK']          || '',
       shp:         r['SHIPMENT NUMBER']        || '',
-      packing:     r['SKU PACKING APPROVAL']   || '',
+      packing:     (r['SKU PACKING APPROVAL'] || r['SKU PACKING APPROVAL '] || '').toString().trim(),
       awb:         r['AWB NUMBER']               || '',
       driveLink:   r['FSL PACKING LIST PDF REPOSITORY FOLDER LINK'] || '',
     }));
@@ -2010,15 +2010,16 @@ function buildShipmentsFromMaster() {
 }
 
 function updateShipmentStats() {
-  var total = allShipments.length;
-  var packing    = allShipments.filter(function(s){ return !s.packed && !s.dispatched; }).length;
+  var total      = allShipments.length;
+  var packing    = allShipments.filter(function(s){ return !s.packed && !s.dispatched && !s.delivered; }).length;
   var packed     = allShipments.filter(function(s){ return s.packed && !s.dispatched; }).length;
-  var dispatched = allShipments.filter(function(s){ return s.dispatched; }).length;
+  var dispatched = allShipments.filter(function(s){ return s.dispatched && !s.delivered; }).length;
+  var delivered  = allShipments.filter(function(s){ return s.delivered; }).length;
   document.getElementById('shp-total').textContent     = total;
   document.getElementById('shp-packing').textContent   = packing;
   document.getElementById('shp-packed').textContent    = packed;
   document.getElementById('shp-dispatched').textContent= dispatched;
-  document.getElementById('shp-delivered').textContent = '--';
+  document.getElementById('shp-delivered').textContent = delivered;
 }
 
 function populateShipmentLotFilter() {
@@ -2037,60 +2038,143 @@ function renderShipments() {
   var status = document.getElementById('shpStatusFilter')?document.getElementById('shpStatusFilter').value:'ALL';
   var brand  = document.getElementById('shpBrandFilter') ?document.getElementById('shpBrandFilter').value :'ALL';
   var lot    = document.getElementById('shpLotFilter')   ?document.getElementById('shpLotFilter').value   :'ALL';
+
   filteredShipments = allShipments.filter(function(s) {
-    if (status==='PACKING'    && (s.packed||s.dispatched)) return false;
+    if (status==='PACKING'    && (s.packed||s.dispatched||s.delivered)) return false;
     if (status==='PACKED'     && (!s.packed||s.dispatched)) return false;
-    if (status==='DISPATCHED' && !s.dispatched) return false;
+    if (status==='DISPATCHED' && (!s.dispatched||s.delivered)) return false;
+    if (status==='DELIVERED'  && !s.delivered) return false;
     if (status==='NO_AWB'     && s.awb) return false;
-    if (brand!=='ALL' && s.brands.indexOf(brand)===-1) return false;
-    if (lot!=='ALL'   && s.lot!==lot) return false;
-    if (search) { var hay=(s.shp+' '+s.name+' '+s.lot+' '+s.contact).toLowerCase(); if(hay.indexOf(search)===-1)return false; }
+    if (brand!=='ALL') {
+      var brandMatch = s.brands.some(function(b){ return b.toLowerCase().indexOf(brand.toLowerCase())!==-1; });
+      if (!brandMatch) return false;
+    }
+    if (lot!=='ALL' && s.lot!==lot) return false;
+    if (search) {
+      var hay=(s.shp+' '+s.name+' '+s.lot+' '+s.contact+' '+s.brand).toLowerCase();
+      if (hay.indexOf(search)===-1) return false;
+    }
     return true;
   });
+
   document.getElementById('shpTableCount').textContent = filteredShipments.length+' shipment'+(filteredShipments.length!==1?'s':'');
+
   if (!filteredShipments.length) {
-    document.getElementById('shipmentsBody').innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128666;</div><div class="empty-title">No shipments found</div><div class="empty-sub">Adjust filters or ensure orders have SHP numbers assigned.</div></div></td></tr>';
+    document.getElementById('shipmentsBody').innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128666;</div><div class="empty-title">No shipments found</div><div class="empty-sub">Adjust filters or refresh.</div></div></td></tr>';
     return;
   }
-  var BC = {'Botanic Hearth':'var(--bh)','Majestic Pure':'var(--mp)','Villain':'var(--vl)','My Fitness':'var(--mf)'};
+
+  var BC = {'Botanic Hearth':'var(--bh)','Majestic Pure':'var(--mp)','Villain':'var(--vl)','My Fitness':'var(--mf)','My Fitness ':'var(--mf)'};
+
   document.getElementById('shipmentsBody').innerHTML = filteredShipments.map(function(s) {
-    var approvedCnt = s.rows.filter(function(r){ return (r.packing||'').trim()==='Approved'; }).length;
-    var rejectedCnt = s.rows.filter(function(r){ return (r.packing||'').trim()==='Rejected'; }).length;
-    var resolvedCnt = approvedCnt + rejectedCnt;
+    // Packing pill — from col G of Dispatch Tracker
+    var packStatus = (s.packStatus||'').trim();
     var packPill;
-    if (s.packed) {
-      packPill = '<span class="pill pill-green">&#10003; Packed ('+approvedCnt+' OK'+(rejectedCnt?', '+rejectedCnt+' Rej':'')+' )</span>';
-    } else if (resolvedCnt > 0) {
-      packPill = '<span class="pill pill-amber">&#9203; Partial ('+resolvedCnt+'/'+s.rows.length+')</span>';
+    if (packStatus.toLowerCase()==='packed' || packStatus.toLowerCase()==='packing complete') {
+      packPill = '<span class="pill pill-green">&#10003; Packed</span>';
+    } else if (packStatus) {
+      packPill = '<span class="pill pill-amber">'+packStatus+'</span>';
     } else {
-      packPill = '<span class="pill pill-muted">Awaiting WH</span>';
+      packPill = '<span class="pill pill-muted">Pending</span>';
     }
-    var dispPill = s.dispatched
-      ? '<span class="pill pill-green">&#10003; Dispatched</span>'
-      : (s.packed ? '<span class="pill pill-amber">Ready to Dispatch</span>' : '<span class="pill pill-muted">&#8212;</span>');
+
+    // Dispatch pill
+    var dispPill;
+    if (s.delivered) {
+      dispPill = '<span class="pill pill-green">&#10003; Delivered</span>';
+    } else if (s.dispatched) {
+      dispPill = '<span class="pill pill-blue">&#9992; Dispatched</span>';
+    } else if (s.packed) {
+      dispPill = '<span class="pill pill-amber">Ready</span>';
+    } else {
+      dispPill = '<span class="pill pill-muted">&#8212;</span>';
+    }
+
+    // Brand badges
     var brandBadges = s.brands.map(function(b){
-      var c = BC[b]||'var(--muted)';
-      return '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:100px;border:1px solid '+c+';color:'+c+';margin-right:3px">'+b.split(' ')[0]+'</span>';
+      var bClean = b.trim();
+      var c = BC[bClean]||'var(--muted)';
+      return '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:100px;border:1px solid '+c+';color:'+c+';margin-right:3px;white-space:nowrap">'+bClean.split(' ')[0]+'</span>';
     }).join('');
+
+    // AWB cell
     var safeShp = s.shp.replace(/[^a-zA-Z0-9]/g,'');
-    var awbCell = s.dispatched
-      ? '<div style="display:flex;align-items:center;gap:6px"><span style="font-family:monospace;font-size:11px;color:var(--teal)">'+s.awb+'</span><button data-shp="'+s.shp+'" data-awb="'+s.awb+'" onclick="openAwbModal(this.dataset.shp,this.dataset.awb)" style="font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline">edit</button></div>'
-      : '<div style="display:flex;align-items:center;gap:6px"><input type="text" class="awb-input" id="awb-'+safeShp+'" placeholder="Enter AWB..." style="width:140px"><button data-shp="'+s.shp+'" onclick="saveAwb(this.dataset.shp)" class="btn btn-success" style="padding:5px 10px;font-size:11px">Save</button></div>';
-    return '<tr><td><span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--teal)">'+s.shp+'</span></td><td><div style="font-weight:600;font-size:12px">'+(s.name||'&#8212;')+'</div><div style="font-size:10px;color:var(--muted);font-family:monospace">'+(s.contact||'')+'</div></td><td>'+(brandBadges||'<span style="color:var(--muted)">&#8212;</span>')+'</td><td style="font-weight:600;font-size:12px">'+s.skuCount+' SKU'+(s.skuCount!==1?'s':'')+'</td><td>'+(s.lot?'<span class="pill pill-blue">Lot '+s.lot+'</span>':'<span class="pill pill-muted">&#8212;</span>')+'</td><td>'+packPill+'</td><td>'+awbCell+'</td><td>'+dispPill+'</td></tr>';
+    var awbCell;
+    if (s.awb) {
+      var trackBtn = s.trackLink
+        ? '<a href="'+s.trackLink+'" target="_blank" style="font-size:10px;color:var(--teal);text-decoration:none;margin-left:6px">Track &#8599;</a>'
+        : '';
+      awbCell = '<div style="display:flex;align-items:center;gap:4px"><span style="font-family:monospace;font-size:11px;color:var(--teal)">'+s.awb+'</span>'+trackBtn+'<button data-shp="'+s.shp+'" data-awb="'+s.awb+'" onclick="openAwbModal(this.dataset.shp,this.dataset.awb)" style="font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline;margin-left:4px">edit</button></div>';
+    } else {
+      awbCell = '<div style="display:flex;align-items:center;gap:6px"><input type="text" class="awb-input" id="awb-'+safeShp+'" placeholder="Enter AWB..." style="width:130px"><button data-shp="'+s.shp+'" onclick="saveAwb(this.dataset.shp)" class="btn btn-success" style="padding:5px 10px;font-size:11px">Save</button></div>';
+    }
+
+    return '<tr>'+
+      '<td><span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--teal)">'+s.shp+'</span></td>'+
+      '<td><div style="font-weight:600;font-size:12px">'+(s.name||'&#8212;')+'</div><div style="font-size:10px;color:var(--muted);font-family:monospace">'+(s.contact||'')+'</div></td>'+
+      '<td>'+(brandBadges||'<span style="color:var(--muted)">&#8212;</span>')+'</td>'+
+      '<td style="font-size:11px;color:var(--ink-2)">'+(s.skus||'&#8212;')+'</td>'+
+      '<td>'+(s.lot?'<span class="pill pill-blue">Lot '+s.lot+'</span>':'<span class="pill pill-muted">&#8212;</span>')+'</td>'+
+      '<td>'+packPill+'</td>'+
+      '<td>'+awbCell+'</td>'+
+      '<td>'+dispPill+'</td>'+
+      '</tr>';
   }).join('');
 }
 
 async function loadShipments() {
-  if (allMasterOrders.length === 0) {
-    document.getElementById('shipmentsBody').innerHTML = '<tr><td colspan="8" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div><div class="skeleton" style="width:60%"></div></td></tr>';
-    await loadMasterOrders(true);
+  // Read directly from Dispatch Tracker — FSL EMX Delivery Log
+  // Cols: A=SHP, B=Lot, C=Name, D=Contact, E=Brand, F=Approved SKUs,
+  //       G=Packing Status, H=AWB, I=Dispatch Status, J=Delivery Status,
+  //       K=EMX Tracking Link, L=EMX AWB PDF
+  document.getElementById('shipmentsBody').innerHTML = '<tr><td colspan="8" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div><div class="skeleton" style="width:60%"></div></td></tr>';
+  document.getElementById('shpTableCount').textContent = 'Loading...';
+  try {
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/1-mhX3OPkZiCAseIYs2wP9DsrfedyiDtRv2-JbK4mwO0/values/FSL%20EMX%20Delivery%20Log!A2:L500?key=AIzaSyDAkVIC8G7v8wrZdfvZBMzd5dpHCTMPfg4';
+    var res  = await fetch(url);
+    var json = await res.json();
+    var rows = json.values || [];
+    allShipments = rows
+      .filter(function(r){ return r[0] && r[0].toString().trim(); })
+      .map(function(r) {
+        var shp        = (r[0]||'').toString().trim();
+        var lot        = (r[1]||'').toString().trim();
+        var name       = (r[2]||'').toString().trim();
+        var contact    = (r[3]||'').toString().trim();
+        var brand      = (r[4]||'').toString().trim();
+        var skus       = (r[5]||'').toString().trim();
+        var packStatus = (r[6]||'').toString().trim();
+        var awb        = (r[7]||'').toString().trim();
+        var dispStatus = (r[8]||'').toString().trim();
+        var delivStatus= (r[9]||'').toString().trim();
+        var trackLink  = (r[10]||'').toString().trim();
+        var awbPdf     = (r[11]||'').toString().trim();
+        // Packing: use col G directly from Dispatch Tracker
+        // Values expected: "Packed", "Packing", or blank
+        var packed     = packStatus.toLowerCase() === 'packed' || packStatus.toLowerCase() === 'packing complete';
+        var dispatched = awb.length > 0;
+        var delivered  = delivStatus.toLowerCase().indexOf('deliver') !== -1;
+        return {
+          shp: shp, lot: lot, name: name, contact: contact,
+          brand: brand, skus: skus,
+          packStatus: packStatus, awb: awb,
+          dispStatus: dispStatus, delivStatus: delivStatus,
+          trackLink: trackLink, awbPdf: awbPdf,
+          brands: brand.split(/[,\n]/).map(function(b){ return b.trim(); }).filter(Boolean),
+          packed: packed, dispatched: dispatched, delivered: delivered
+        };
+      });
+    // Sort by SHP number
+    allShipments.sort(function(a,b){ return a.shp.localeCompare(b.shp); });
+    updateShipmentStats();
+    populateShipmentLotFilter();
+    renderShipments();
+    document.getElementById('shpLastRefresh').textContent = 'Updated: '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Dubai'});
+    showToast('\u2713 '+allShipments.length+' shipments loaded', 'ok');
+  } catch(e) {
+    document.getElementById('shipmentsBody').innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128666;</div><div class="empty-title">Could not load shipments</div><div class="empty-sub">'+e.message+'</div></div></td></tr>';
+    showToast('Shipment fetch failed: '+e.message, 'err');
   }
-  buildShipmentsFromMaster();
-  updateShipmentStats();
-  populateShipmentLotFilter();
-  renderShipments();
-  document.getElementById('shpLastRefresh').textContent = 'Updated: '+new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Dubai'});
-  showToast('\u2713 Shipments loaded', 'ok');
 }
 
 async function saveAwb(shp) {
@@ -2138,36 +2222,52 @@ async function saveAwbFromModal(shp) {
 var allFinanceData = [], filteredFinanceData = [];
 
 async function loadFinance() {
+  // Read directly from Finance Tracker — FSL EMX Shipment Cost tab via Sheets API
   document.getElementById('financeBody').innerHTML = '<tr><td colspan="9" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div><div class="skeleton" style="width:60%"></div></td></tr>';
   document.getElementById('finTableCount').textContent = 'Loading...';
   document.getElementById('financeFoot').style.display = 'none';
   try {
-    var res  = await fetch(MASTER_WEBAPP+'?action=getFinance', {
-      redirect: 'follow',
-      headers: { 'Accept': 'application/json' }
-    });
-    var json = await res.json();
-    if (json.success && json.rows && json.rows.length) {
+    var finUrl = 'https://sheets.googleapis.com/v4/spreadsheets/12NeJf0iAAP--DAscZH_RJtRb-ULBmPU0e7vUiYXLsr8/values/FSL%20EMX%20Shipment%20Cost!A1:U500?key=AIzaSyDAkVIC8G7v8wrZdfvZBMzd5dpHCTMPfg4';
+    var finRes  = await fetch(finUrl);
+    var finJson = await finRes.json();
+    var finRows = finJson.values || [];
+    if (finRows.length > 1) {
+      var hdrs = finRows[0];
+      var json = { success: true, rows: finRows.slice(1).map(function(r) {
+        var obj = {};
+        hdrs.forEach(function(h,i){ obj[h] = r[i]||''; });
+        return obj;
+      }).filter(function(r){ return r['SHIPMENT NUMBER'] && r['SHIPMENT NUMBER'].toString().trim(); }) };
+      if (json.rows && json.rows.length) {
       allFinanceData = (json.rows||[]).map(function(r) {
         return {
-          month:    r['MONTH']||r['Month']||'',
-          shp:      r['SHIPMENT NUMBER']||r['SHP Number']||'',
-          awb:      r['AWB NUMBER']||r['AWB']||'',
-          name:     r['NAME']||r['Name']||'',
-          brands:   r['BRANDS']||r['Brand']||'',
-          skus:     r['APPROVED SKUS']||r['SKUs']||'',
-          cogs:     parseFloat(r['TOTAL COGS']||r['COGS']||0)||0,
-          logistics:parseFloat(r['LOGISTICS COST']||r['Logistics']||0)||0,
+          month:    (r['MONTH']||'').toString().trim(),
+          shp:      (r['SHIPMENT NUMBER']||'').toString().trim(),
+          awb:      (r['AWB NUMBER']||'').toString().trim(),
+          name:     (r['INFLUENCER NAME']||'').toString().trim(),
+          brands:   (r['BRAND(S)']||r['BRANDS']||'').toString().trim(),
+          skus:     (r['APPROVED SKU(S)']||r['APPROVED SKUS']||'').toString().trim(),
+          cogs:     parseFloat(r['TOTAL LANDED COGS (AED)']||r['TOTAL COGS']||0)||0,
+          logistics:parseFloat(r['LOGISTICS COST (AED)']||r['LOGISTICS COST']||0)||0,
           total:    parseFloat(r['TOTAL SHIPMENT COST']||r['Total']||0)||0,
-          bhCogs:   parseFloat(r['BH COGS']||0)||0, bhLog:parseFloat(r['BH LOGISTICS']||0)||0,
-          mpCogs:   parseFloat(r['MP COGS']||0)||0, mpLog:parseFloat(r['MP LOGISTICS']||0)||0,
-          vlCogs:   parseFloat(r['VL COGS']||0)||0, vlLog:parseFloat(r['VL LOGISTICS']||0)||0,
-          mfCogs:   parseFloat(r['MF COGS']||0)||0, mfLog:parseFloat(r['MF LOGISTICS']||0)||0
+          bhCogs:   parseFloat(r['BH LANDED COGS (AED)']||r['BH COGS']||0)||0,
+          bhLog:    parseFloat(r['BH LOGISTICS SHARE (AED)']||r['BH LOGISTICS']||0)||0,
+          mpCogs:   parseFloat(r['MP LANDED COGS (AED)']||r['MP COGS']||0)||0,
+          mpLog:    parseFloat(r['MP LOGISTICS SHARE (AED)']||r['MP LOGISTICS']||0)||0,
+          vlCogs:   parseFloat(r['VILLAIN LANDED COGS (AED)']||r['VL COGS']||0)||0,
+          vlLog:    parseFloat(r['VILLAIN LOGISTICS SHARE (AED)']||r['VL LOGISTICS']||0)||0,
+          mfCogs:   parseFloat(r['MYFITNESS LANDED COGS (AED)']||r['MF COGS']||0)||0,
+          mfLog:    parseFloat(r['MYFITNESS LOGISTICS SHARE (AED)']||r['MF LOGISTICS']||0)||0
         };
       });
-    } else { throw new Error('No data from Finance endpoint'); }
+      } else { throw new Error('No finance rows found'); }
+      } else { throw new Error('Empty finance sheet response'); }
+    } else { throw new Error('Finance sheet fetch failed'); }
   } catch(e) {
-    buildFinanceFromMaster();
+    console.error('Finance load error:', e);
+    document.getElementById('financeBody').innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">&#128176;</div><div class="empty-title">Could not load finance data</div><div class="empty-sub">'+e.message+'</div></div></td></tr>';
+    showToast('Finance fetch failed: '+e.message, 'err');
+    return;
   }
   populateMonthFilter();
   renderFinance();
