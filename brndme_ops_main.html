@@ -1712,7 +1712,11 @@ async function loadMasterOrders(silent) {
   }
   try {
     // Use Apps Script GET endpoint — avoids API key permission issues on Master sheet
-    const res  = await fetch(`${MASTER_WEBAPP}?action=getOrders`);
+    // redirect:'follow' is required — Apps Script /exec redirects to googleusercontent.com
+    const res  = await fetch(`${MASTER_WEBAPP}?action=getOrders`, {
+      redirect: 'follow',
+      headers: { 'Accept': 'application/json' }
+    });
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Apps Script error');
     // Apps Script returns rows as objects keyed by actual sheet header names
@@ -2133,7 +2137,10 @@ async function loadFinance() {
   document.getElementById('finTableCount').textContent = 'Loading...';
   document.getElementById('financeFoot').style.display = 'none';
   try {
-    var res  = await fetch(MASTER_WEBAPP+'?action=getFinance');
+    var res  = await fetch(MASTER_WEBAPP+'?action=getFinance', {
+      redirect: 'follow',
+      headers: { 'Accept': 'application/json' }
+    });
     var json = await res.json();
     if (json.success && json.rows && json.rows.length) {
       allFinanceData = (json.rows||[]).map(function(r) {
