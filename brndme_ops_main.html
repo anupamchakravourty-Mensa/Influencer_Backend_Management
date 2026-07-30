@@ -2222,7 +2222,6 @@ async function saveAwbFromModal(shp) {
 var allFinanceData = [], filteredFinanceData = [];
 
 async function loadFinance() {
-  // Read directly from Finance Tracker — FSL EMX Shipment Cost tab via Sheets API
   document.getElementById('financeBody').innerHTML = '<tr><td colspan="9" style="padding:28px"><div class="skeleton" style="margin-bottom:12px"></div><div class="skeleton" style="width:60%"></div></td></tr>';
   document.getElementById('finTableCount').textContent = 'Loading...';
   document.getElementById('financeFoot').style.display = 'none';
@@ -2231,47 +2230,41 @@ async function loadFinance() {
     var finRes  = await fetch(finUrl);
     var finJson = await finRes.json();
     var finRows = finJson.values || [];
-    if (finRows.length > 1) {
-      var hdrs = finRows[0];
-      var json = { success: true, rows: finRows.slice(1).map(function(r) {
+    if (finRows.length < 2) throw new Error('No data in Finance Tracker');
+    var hdrs = finRows[0];
+    allFinanceData = finRows.slice(1)
+      .filter(function(r){ return r[1] && r[1].toString().trim(); })
+      .map(function(r) {
         var obj = {};
         hdrs.forEach(function(h,i){ obj[h] = r[i]||''; });
-        return obj;
-      }).filter(function(r){ return r['SHIPMENT NUMBER'] && r['SHIPMENT NUMBER'].toString().trim(); }) };
-      if (json.rows && json.rows.length) {
-      allFinanceData = (json.rows||[]).map(function(r) {
         return {
-          month:    (r['MONTH']||'').toString().trim(),
-          shp:      (r['SHIPMENT NUMBER']||'').toString().trim(),
-          awb:      (r['AWB NUMBER']||'').toString().trim(),
-          name:     (r['INFLUENCER NAME']||'').toString().trim(),
-          brands:   (r['BRAND(S)']||r['BRANDS']||'').toString().trim(),
-          skus:     (r['APPROVED SKU(S)']||r['APPROVED SKUS']||'').toString().trim(),
-          cogs:     parseFloat(r['TOTAL LANDED COGS (AED)']||r['TOTAL COGS']||0)||0,
-          logistics:parseFloat(r['LOGISTICS COST (AED)']||r['LOGISTICS COST']||0)||0,
-          total:    parseFloat(r['TOTAL SHIPMENT COST']||r['Total']||0)||0,
-          bhCogs:   parseFloat(r['BH LANDED COGS (AED)']||r['BH COGS']||0)||0,
-          bhLog:    parseFloat(r['BH LOGISTICS SHARE (AED)']||r['BH LOGISTICS']||0)||0,
-          mpCogs:   parseFloat(r['MP LANDED COGS (AED)']||r['MP COGS']||0)||0,
-          mpLog:    parseFloat(r['MP LOGISTICS SHARE (AED)']||r['MP LOGISTICS']||0)||0,
-          vlCogs:   parseFloat(r['VILLAIN LANDED COGS (AED)']||r['VL COGS']||0)||0,
-          vlLog:    parseFloat(r['VILLAIN LOGISTICS SHARE (AED)']||r['VL LOGISTICS']||0)||0,
-          mfCogs:   parseFloat(r['MYFITNESS LANDED COGS (AED)']||r['MF COGS']||0)||0,
-          mfLog:    parseFloat(r['MYFITNESS LOGISTICS SHARE (AED)']||r['MF LOGISTICS']||0)||0
+          month:    (obj['MONTH']||'').toString().trim(),
+          shp:      (obj['SHIPMENT NUMBER']||'').toString().trim(),
+          awb:      (obj['AWB NUMBER']||'').toString().trim(),
+          name:     (obj['INFLUENCER NAME']||'').toString().trim(),
+          brands:   (obj['BRAND(S)']||'').toString().trim(),
+          skus:     (obj['APPROVED SKU(S)']||'').toString().trim(),
+          cogs:     parseFloat(obj['TOTAL LANDED COGS (AED)'])||0,
+          logistics:parseFloat(obj['LOGISTICS COST (AED)'])||0,
+          total:    parseFloat(obj['TOTAL SHIPMENT COST (AED)'])||0,
+          bhCogs:   parseFloat(obj['BH LANDED COGS (AED)'])||0,
+          bhLog:    parseFloat(obj['BH LOGISTICS SHARE (AED)'])||0,
+          mpCogs:   parseFloat(obj['MP LANDED COGS (AED)'])||0,
+          mpLog:    parseFloat(obj['MP LOGISTICS SHARE (AED)'])||0,
+          vlCogs:   parseFloat(obj['VILLAIN LANDED COGS (AED)'])||0,
+          vlLog:    parseFloat(obj['VILLAIN LOGISTICS SHARE (AED)'])||0,
+          mfCogs:   parseFloat(obj['MYFITNESS LANDED COGS (AED)'])||0,
+          mfLog:    parseFloat(obj['MYFITNESS LOGISTICS SHARE (AED)'])||0
         };
       });
-      } else { throw new Error('No finance rows found'); }
-      } else { throw new Error('Empty finance sheet response'); }
-    } else { throw new Error('Finance sheet fetch failed'); }
+    populateMonthFilter();
+    renderFinance();
+    showToast('\u2713 '+allFinanceData.length+' finance rows loaded', 'ok');
   } catch(e) {
     console.error('Finance load error:', e);
     document.getElementById('financeBody').innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">&#128176;</div><div class="empty-title">Could not load finance data</div><div class="empty-sub">'+e.message+'</div></div></td></tr>';
     showToast('Finance fetch failed: '+e.message, 'err');
-    return;
   }
-  populateMonthFilter();
-  renderFinance();
-  showToast('\u2713 Finance data loaded','ok');
 }
 
 function buildFinanceFromMaster() {
