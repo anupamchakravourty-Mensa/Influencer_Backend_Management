@@ -1,0 +1,7 @@
+{
+  "routes": [
+    { "src": "/", "dest": "/brndme_ops_main.html" },
+    { "src": "/portal", "dest": "/brndme_ops_main.html" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}
