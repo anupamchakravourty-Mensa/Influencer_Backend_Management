@@ -7,12 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#F0F4F8;--surface:#FFFFFF;--card:#F7F9FC;--card-h:#EEF2F7;
-  --border:#E2E8F0;--border-l:#CBD5E1;--ink:#0F172A;--ink-2:#475569;
-  --muted:#94A3B8;--dim:#CBD5E1;--red:#E64833;--teal:#0EA5E9;
-  --amber:#F5A623;--green:#10B981;--purple:#8B5CF6;--blue:#3B82F6;
-  --bh:#10B981;--mp:#8B5CF6;--vl:#E64833;--mf:#F5A623;
-  --sidebar-bg:#1E293B;--sidebar-w:240px;--sidebar-c:64px;--topbar-h:54px;
+  --bg:#F4F6FA;--surface:#FFFFFF;--card:#FFFFFF;--card-h:#EEF1F8;
+  --border:#E2E8F0;--border-l:#CBD5E1;--ink:#1A2340;--ink-2:#4A5568;
+  --muted:#8896A8;--dim:#CBD5E1;
+  --red:#F05A40;--teal:#35558A;--amber:#FEB400;--green:#27AE60;
+  --purple:#8B5CF6;--blue:#35558A;
+  --bh:#27AE60;--mp:#8B5CF6;--vl:#F05A40;--mf:#FEB400;
+  --sidebar-bg:#35558A;--sidebar-w:240px;--sidebar-c:64px;--topbar-h:54px;
   --font-d:'Syne',sans-serif;--font-b:'Inter',sans-serif;
   --r:8px;--rl:14px;
 }
@@ -581,16 +582,9 @@ input,select{font-family:inherit;}
           </div>
           <div class="page-actions">
             <button class="btn" onclick="loadMasterOrders()">↻ Refresh</button>
-            <button class="btn" style="background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.3);color:var(--amber)"
-              onclick="callMasterAction('assignLots')" id="assignLotsBtn">
-               Assign Lot Numbers
-            </button>
-            <button class="btn" style="background:rgba(96,165,250,0.1);border-color:rgba(96,165,250,0.3);color:var(--blue)"
-              onclick="callMasterAction('generateCSV')" id="generateCSVBtn">
-               Generate CSVs
-            </button>
-            <button class="btn btn-primary" onclick="callMasterAction('shareWarehouse')" id="shareWHBtn">
-               Share with Warehouse
+            <button class="btn" style="background:rgba(240,90,64,0.1);border-color:rgba(240,90,64,0.3);color:var(--red)"
+              onclick="processAndDispatch()" id="processDispatchBtn">
+              &#9889; Process &amp; Dispatch All
             </button>
           </div>
         </div>
@@ -615,6 +609,12 @@ input,select{font-family:inherit;}
             <option value="Majestic Pure"> Majestic Pure</option>
             <option value="Villain"> Villain</option>
             <option value="My Fitness"> My Fitness</option>
+          </select>
+          <select class="filter-select" id="mstLotFilter" onchange="renderMasterOrders()">
+            <option value="ALL">All Lots</option>
+          </select>
+          <select class="filter-select" id="mstShpFilter" onchange="renderMasterOrders()">
+            <option value="ALL">All SHPs</option>
           </select>
           <select class="filter-select" id="mstSortFilter" onchange="renderMasterOrders()">
             <option value="CONTACT">Sort by Contact No.</option>
@@ -658,7 +658,7 @@ input,select{font-family:inherit;}
                 </tr>
               </thead>
               <tbody id="masterOrdersBody">
-                <tr><td colspan="11" style="padding:28px">
+                <tr><td colspan="10" style="padding:28px">
                   <div class="skeleton" style="margin-bottom:12px"></div>
                   <div class="skeleton" style="width:60%"></div>
                 </td></tr>
@@ -726,7 +726,7 @@ input,select{font-family:inherit;}
 
     </div>
     <!-- ══ FINANCE ═════════════════════════════════════ -->
-    <div id="section-finance" style="display:none" class="pg">
+    <div id="section-finance" style="display:none;overflow-y:auto" class="pg">
       <div class="page-header">
         <div class="page-title-block">
           <div class="page-eyebrow">Finance</div>
@@ -1307,6 +1307,8 @@ function setOrderSub(btn, sub) {
 function startAutoRefresh() {
   stopAutoRefresh();
   ordAutoRefresh = setInterval(() => {
+    // Skip refresh for 90s after any Go-Ahead write to avoid overwriting optimistic state
+    if (Date.now() - _lastWriteTime < 90000) return;
     if (currentOrdSub === 'brand-orders') loadOrders(true);
     else if (currentOrdSub === 'master-orders') loadMasterOrders(true);
   }, 30000);
@@ -1503,25 +1505,33 @@ async function giveGoAhead(key, brand, row) {
 async function revokeGoAhead(key, brand, row) {
   await writeGoAhead(key, brand, row, '');
 }
+var _lastWriteTime = 0; // throttle auto-refresh after writes
+
 async function writeGoAhead(key, brand, row, value) {
-  // Update local state immediately (optimistic)
-  const group = allOrders.filter(o => {
-    return `${o._brand}__${o.orderId || o.contact + '__' + o._brand}` === key;
-  });
-  group.forEach(o => o.goAhead = value === 'Yes');
+  // 1. Update local state immediately (optimistic UI)
+  const group = allOrders.filter(o =>
+    `${o._brand}__${o.orderId || o.contact + '__' + o._brand}` === key
+  );
+  if (!group.length) { showToast('Order not found', 'err'); return; }
+  group.forEach(o => { o.goAhead = value === 'Yes'; o._localWrite = true; });
+  _lastWriteTime = Date.now();
   updateOrderStats(); renderOrders();
-  // Write to sheet via Apps Script
+
+  // 2. Write to sheet
   try {
     const webApp = BRAND_WEBAPPS[brand];
-    const rows   = group.map(o => ({ row: o._row, value }));
-    await fetch(webApp, {
-      method: 'POST', mode: 'no-cors',
+    if (!webApp) throw new Error('No webapp URL for brand: ' + brand);
+    const rows = group.map(o => ({ row: o._row, value }));
+    const res  = await fetch(webApp + '?action=setGoAhead', {
+      method: 'POST',
+      redirect: 'follow',
       body: JSON.stringify({ action: 'setGoAhead', rows }),
       headers: { 'Content-Type': 'application/json' }
     });
-    showToast(`${value==='Yes'?'✓ Go-Ahead given':'↩ Revoked'} — ${group[0]?.name||''}`, value?'ok':'');
+    showToast(value==='Yes' ? '✓ Go-Ahead saved to sheet — '+group[0]?.name : '↩ Revoked — '+group[0]?.name, value?'ok':'');
   } catch(e) {
-    showToast('Portal updated — also toggle in sheet if needed', '');
+    showToast('Portal updated — sheet write failed: '+e.message, 'err');
+    console.error('writeGoAhead error:', e);
   }
 }
 // ── Bulk operations ───────────────────────────────────
@@ -1705,7 +1715,7 @@ function closeOrderDrawer() {
 async function loadMasterOrders(silent) {
   if (!silent) {
     document.getElementById('masterOrdersBody').innerHTML =
-      `<tr><td colspan="11" style="padding:28px">` +
+      `<tr><td colspan="10" style="padding:28px">` +
       Array(4).fill(`<div class="skeleton" style="margin-bottom:12px"></div>`).join('') +
       `</td></tr>`;
     document.getElementById('mstTableCount').textContent = 'Loading...';
@@ -1738,12 +1748,13 @@ async function loadMasterOrders(silent) {
       skuStatus:   r['SKU FILE STATUS']        || '',
       emailStatus: r['EMAIL STATUS']           || '',
       skuLink:     r['SKU FILE LINK']          || '',
-      shp:         r['SHIPMENT NUMBER']        || '',
+      shp:         r['INTERNAL SHIPMENT S. NUMBER'] || r['SHIPMENT NUMBER'] || '',
       packing:     (r['SKU PACKING APPROVAL'] || r['SKU PACKING APPROVAL '] || '').toString().trim(),
       awb:         r['AWB NUMBER']               || '',
       driveLink:   r['FSL PACKING LIST PDF REPOSITORY FOLDER LINK'] || '',
     }));
     updateMasterStats();
+    populateMasterFilters();
     renderMasterOrders();
     if (!silent) showToast(`✓ ${allMasterOrders.length} rows loaded from Master`, 'ok');
   } catch(e) {
@@ -1766,13 +1777,26 @@ function updateMasterStats() {
   document.getElementById('mst-approved').textContent     = approved;
   document.getElementById('mst-pending-pack').textContent = pendingPack;
 }
+function populateMasterFilters() {
+  const lots = [...new Set(allMasterOrders.map(r=>r.lot).filter(Boolean))].sort((a,b)=>parseInt(a)-parseInt(b));
+  const sel1 = document.getElementById('mstLotFilter');
+  if (sel1) { while(sel1.options.length>1) sel1.remove(1); lots.forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent='Lot '+l;sel1.appendChild(o);}); }
+  const shps = [...new Set(allMasterOrders.map(r=>r.shp).filter(Boolean))].sort();
+  const sel2 = document.getElementById('mstShpFilter');
+  if (sel2) { while(sel2.options.length>1) sel2.remove(1); shps.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sel2.appendChild(o);}); }
+}
+
 function renderMasterOrders() {
   const search = (document.getElementById('mstSearch')?.value||'').toLowerCase();
   const brand  = document.getElementById('mstBrandFilter')?.value || 'ALL';
   const sort   = document.getElementById('mstSortFilter')?.value  || 'CONTACT';
   const status = document.getElementById('mstStatusFilter')?.value|| 'ALL';
+  const lotF   = document.getElementById('mstLotFilter')?.value   || 'ALL';
+  const shpF   = document.getElementById('mstShpFilter')?.value   || 'ALL';
   let rows = allMasterOrders.filter(r => {
     if (brand !== 'ALL' && r.brand !== brand) return false;
+    if (lotF !== 'ALL' && r.lot !== lotF) return false;
+    if (shpF !== 'ALL' && r.shp !== shpF) return false;
     if (status === 'NOLOT'        && r.lot)                              return false;
     if (status === 'LOT'          && !r.lot)                             return false;
     if (status === 'CSV'          && r.skuStatus !== 'Done')             return false;
@@ -1856,6 +1880,34 @@ function renderMasterOrders() {
   }).join('');
 }
 // ── Master action buttons ─────────────────────────────
+async function processAndDispatch() {
+  const btn = document.getElementById('processDispatchBtn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  const steps = [
+    { action:'assignLots',     label:'Assigning lots...' },
+    { action:'generateCSV',    label:'Generating CSVs...' },
+    { action:'shareWarehouse', label:'Sharing with warehouse...' },
+  ];
+  try {
+    for (const step of steps) {
+      btn.innerHTML = '&#9203; ' + step.label;
+      await fetch(MASTER_WEBAPP, {
+        method:'POST', redirect:'follow',
+        body: JSON.stringify({ action: step.action }),
+        headers: { 'Content-Type':'application/json' }
+      });
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    showToast('✓ All steps complete — lots assigned, CSVs generated, warehouse notified', 'ok');
+    await loadMasterOrders(true);
+  } catch(e) {
+    showToast('Process failed at step: ' + e.message, 'err');
+  }
+  btn.innerHTML = orig;
+  btn.disabled = false;
+}
+
 async function callMasterAction(action) {
   const btnMap = {
     assignLots:     'assignLotsBtn',
@@ -2101,8 +2153,8 @@ function renderShipments() {
     var safeShp = s.shp.replace(/[^a-zA-Z0-9]/g,'');
     var awbCell;
     if (s.awb) {
-      var trackBtn = s.trackLink
-        ? '<a href="'+s.trackLink+'" target="_blank" style="font-size:10px;color:var(--teal);text-decoration:none;margin-left:6px">Track &#8599;</a>'
+      var trackBtn = s.awb
+        ? '<a href="https://www.emx.ae/all-services/track-a-package/step-two?q='+s.awb+'&timestamp='+Date.now()+" target="_blank" style="font-size:10px;color:var(--teal);text-decoration:none;margin-left:6px">Track &#8599;</a>'
         : '';
       awbCell = '<div style="display:flex;align-items:center;gap:4px"><span style="font-family:monospace;font-size:11px;color:var(--teal)">'+s.awb+'</span>'+trackBtn+'<button data-shp="'+s.shp+'" data-awb="'+s.awb+'" onclick="openAwbModal(this.dataset.shp,this.dataset.awb)" style="font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline;margin-left:4px">edit</button></div>';
     } else {
